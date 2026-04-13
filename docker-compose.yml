@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  backend:
+    image: 529646246979.dkr.ecr.ap-southeast-2.amazonaws.com/awstodo-backend:${TAG}
+    restart: always
+    environment:
+      DB_USER: ${DB_USER}
+      DB_HOST: ${DB_HOST}
+      DB_NAME: ${DB_NAME}
+    depends_on:
+      - redis
+
+  nginx:
+    image: 529646246979.dkr.ecr.ap-southeast-2.amazonaws.com/awstodo-nginx:${TAG}
+    container_name: nginx
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
