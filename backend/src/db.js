@@ -1,5 +1,5 @@
 const { Pool } = require("pg");
-const { getSecret } = require("./ASM");
+const { getSecret } = require("./utils/ASM");
 
 let pool;
 
