@@ -49,13 +49,13 @@ jobs:
 
       - name: Build & Push backend
         run: |
-          IMAGE=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/AWStodo-backend
+          IMAGE=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/awstodo-backend
           docker build -t $IMAGE:${{ github.sha }} ./backend
           docker push $IMAGE:${{ github.sha }}
 
       - name: Build & Push nginx
         run: |
-          IMAGE=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/AWStodo-nginx
+          IMAGE=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/awstodo-nginx
           docker build -t $IMAGE:${{ github.sha }} -f nginx/Dockerfile .
           docker push $IMAGE:${{ github.sha }}
         
