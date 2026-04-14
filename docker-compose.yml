@@ -14,8 +14,6 @@ services:
       ACCESS_EXPIRE: ${ACCESS_EXPIRE}
       REFRESH_EXPIRE: ${REFRESH_EXPIRE}
       AWS_REGION: ${AWS_REGION}
-    depends_on:
-      - redis
 
   nginx:
     image: 529646246979.dkr.ecr.ap-southeast-2.amazonaws.com/awstodo-nginx:${TAG}
@@ -25,6 +23,3 @@ services:
       - "80:80"
     depends_on:
       - backend
-  redis:
-    image: redis:7
-    restart: always
