@@ -125,7 +125,8 @@ jobs:
 
               echo "Attempt $i: HTTP $STATUS | Body: $BODY"
 
-              if [ "$STATUS" = "200" ] && echo "$BODY" | grep -q '"database":"UP"'; then
+              # ✅ Check theo API mới
+              if [ "$STATUS" = "200" ] && echo "$BODY" | grep -q '"status":"OK"'; then
                 echo "$label is Healthy!"
                 return 0
               fi
