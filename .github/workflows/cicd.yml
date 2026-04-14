@@ -88,29 +88,34 @@ jobs:
             --comment "Deploy todo app" \
             --parameters '{
               "commands": [
-                "set -e",
-                "mkdir -p /home/ec2-user/AWStodo",
-                "cd /home/ec2-user/AWStodo",
+                "bash -c '\''
 
-                "aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose.yml docker-compose.yml",
+                set -e
 
-                "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com",
+                mkdir -p /home/ec2-user/AWStodo
+                cd /home/ec2-user/AWStodo
 
-                "rm -f .env",
+                aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose.yml docker-compose.yml
 
-                "echo DB_NAME=$(aws ssm get-parameter --name /todoapp/DB_NAME --with-decryption --query Parameter.Value --output text) >> .env",
-                "echo AWS_S3_BUCKET=$(aws ssm get-parameter --name /todoapp/AWS_S3_BUCKET --with-decryption --query Parameter.Value --output text) >> .env",
-                "echo JWT_ACCESS_SECRET=$(aws ssm get-parameter --name /todoapp/JWT_ACCESS_SECRET --with-decryption --query Parameter.Value --output text) >> .env",
-                "echo JWT_REFRESH_SECRET=$(aws ssm get-parameter --name /todoapp/JWT_REFRESH_SECRET --with-decryption --query Parameter.Value --output text) >> .env",
-                "echo REDIS_HOST=$(aws ssm get-parameter --name /todoapp/REDIS_HOST --with-decryption --query Parameter.Value --output text) >> .env",
-                "echo REFRESH_EXPIRE=$(aws ssm get-parameter --name /todoapp/REFRESH_EXPIRE --with-decryption --query Parameter.Value --output text) >> .env",
-                "echo ACCESS_EXPIRE=$(aws ssm get-parameter --name /todoapp/ACCESS_EXPIRE --with-decryption --query Parameter.Value --output text) >> .env",
-                "echo AWS_REGION=$(aws ssm get-parameter --name /todoapp/AWS_REGION --with-decryption --query Parameter.Value --output text) >> .env",
+                rm -f .env
 
-                "echo TAG=${{ github.sha }} >> .env",
+                echo DB_NAME=$(aws ssm get-parameter --name /todoapp/DB_NAME --with-decryption --query Parameter.Value --output text) >> .env
+                echo AWS_S3_BUCKET=$(aws ssm get-parameter --name /todoapp/AWS_S3_BUCKET --with-decryption --query Parameter.Value --output text) >> .env
+                echo JWT_ACCESS_SECRET=$(aws ssm get-parameter --name /todoapp/JWT_ACCESS_SECRET --with-decryption --query Parameter.Value --output text) >> .env
+                echo JWT_REFRESH_SECRET=$(aws ssm get-parameter --name /todoapp/JWT_REFRESH_SECRET --with-decryption --query Parameter.Value --output text) >> .env
+                echo REDIS_HOST=$(aws ssm get-parameter --name /todoapp/REDIS_HOST --with-decryption --query Parameter.Value --output text) >> .env
+                echo REFRESH_EXPIRE=$(aws ssm get-parameter --name /todoapp/REFRESH_EXPIRE --with-decryption --query Parameter.Value --output text) >> .env
+                echo ACCESS_EXPIRE=$(aws ssm get-parameter --name /todoapp/ACCESS_EXPIRE --with-decryption --query Parameter.Value --output text) >> .env
+                echo AWS_REGION=$(aws ssm get-parameter --name /todoapp/AWS_REGION --with-decryption --query Parameter.Value --output text) >> .env
 
-                "docker compose down --remove-orphans",
-                "docker compose pull",
-                "docker compose up -d"
+                echo TAG=${{ github.sha }} >> .env
+
+                aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+                docker compose down --remove-orphans
+                docker compose pull
+                docker compose up -d
+
+                '\''
               ]
             }'
