@@ -218,31 +218,19 @@ jobs:
             aws ssm send-command \
               --instance-ids "${{ secrets.WEBSERVER1ID }}" "${{ secrets.WEBSERVER2ID }}" \
               --document-name "AWS-RunShellScript" \
-              "commands": [
-                "set -ex",
-                "export HOME=/home/ec2-user", # Rất quan trọng để Docker biết config ở đâu
-                "cd /home/ec2-user/AWStodo",
-                
-                # 1. Lấy đúng file compose cũ
-                "aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose-${{ env.PREVIOUS_TAG }}.yml docker-compose.yml",
-                
-                # 2. Tạo file .env (Dùng awk để đảm bảo format chuẩn)
-                "aws ssm get-parameters-by-path --path /todoapp/ --with-decryption --query 'Parameters[*].[Name,Value]' --output text | sed 's|^/todoapp/||' | awk '{print $1 \"=\" $2}' > .env",
-                "echo TAG=${{ env.PREVIOUS_TAG }} >> .env",
-                
-                # 3. Export biến TAG vào shell hiện tại của SSM
-                "export $(grep -v '^#' .env | xargs)", 
+              --parameters "commands=[
+                \"set -ex\",
+                \"cd /home/ec2-user/AWStodo\",
+                \"aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose-${{ env.PREVIOUS_TAG }}.yml docker-compose.yml\",
+                \"aws ssm get-parameters-by-path --path /todoapp/ --with-decryption --query 'Parameters[*].[Name,Value]' --output text | sed 's|^/todoapp/||' | sed 's|\\\\t|=|' > .env\",
+                \"echo TAG=${{ env.PREVIOUS_TAG }} >> .env\",
+                \"docker compose down\",
+                \"docker compose pull\",
+                \"docker compose --env-file .env up -d --force-recreate --remove-orphans\",
+                \"sleep 10\",
+                \"rm -f .env\"
+              ]"
 
-                # 4. Thực hiện Rollback sạch sẽ
-                "docker compose down",
-                "docker compose pull",
-                
-                # Dùng --env-file .env để ép buộc Docker đọc file vừa tạo
-                "docker compose --env-file .env up -d --force-recreate --remove-orphans",
-                
-                "sleep 10",
-                "rm -f .env"
-              ]
             echo "Waiting 10s..."
             sleep 10
 
