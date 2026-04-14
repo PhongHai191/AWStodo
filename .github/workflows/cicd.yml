@@ -91,6 +91,7 @@ jobs:
               REDIS_HOST
               REFRESH_EXPIRE
               ACCESS_EXPIRE
+              AWS_REGION
             )
 
             for param in "${PARAMS[@]}"; do

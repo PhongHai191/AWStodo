@@ -13,6 +13,7 @@ services:
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
       ACCESS_EXPIRE: ${ACCESS_EXPIRE}
       REFRESH_EXPIRE: ${REFRESH_EXPIRE}
+      AWS_REGION: ${AWS_REGION}
     depends_on:
       - redis
 
