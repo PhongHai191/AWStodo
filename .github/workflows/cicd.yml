@@ -114,34 +114,35 @@ jobs:
         run: |
           URL="http://${{ secrets.LB_DNS }}/health"
           
-          # Định nghĩa hàm check health chuyên sâu
           check_health() {
             local url=$1
             local label=$2
-            echo " Checking $label..."
-            for i in {1..8}; do
-              # Lấy body và status code đồng thời
-              RESPONSE=$(curl -s --max-time 5 "$url" || echo "FAILED")
-              STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$url" || echo "000")
-              
-              echo "   Attempt $i: HTTP $STATUS | Body: $RESPONSE"
+            echo "Checking $label..."
 
-              # Kiểm tra: Phải 200 OK VÀ status:UP VÀ database:UP
-              if [ "$STATUS" == "200" ] && echo "$RESPONSE" | grep -q '\"status\":\"UP\"' && echo "$RESPONSE" | grep -q '\"database\":\"UP\"'; then
+            for i in $(seq 1 8); do
+              BODY=$(curl -s --max-time 5 "$url")
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+
+              echo "Attempt $i: HTTP $STATUS | Body: $BODY"
+
+              if [ "$STATUS" = "200" ] && echo "$BODY" | grep -q '"database":"UP"'; then
                 echo "$label is Healthy!"
                 return 0
               fi
+
               sleep 10
             done
+
+            echo "$label FAILED after 8 attempts"
             return 1
           }
 
           if check_health "$URL" "NEW VERSION"; then
-            echo " Deployment Successful!"
+            echo "Deployment Successful!"
             exit 0
           else
-            echo " New version failed! Triggering Rollback to Tag: ${{ env.PREVIOUS_TAG }}..."
-            
+            echo "New version failed! Triggering Rollback to Tag: ${{ env.PREVIOUS_TAG }}..."
+
             aws ssm send-command \
               --instance-ids "${{ secrets.WEBSERVER1ID }}" "${{ secrets.WEBSERVER2ID }}" \
               --document-name "AWS-RunShellScript" \
@@ -157,15 +158,15 @@ jobs:
                   "rm -f .env"
                 ]
               }'
-            
-            echo " Waiting 10s for rollback version to stabilize..."
+
+            echo "Waiting 10s for rollback version..."
             sleep 10
 
             if check_health "$URL" "PREVIOUS VERSION"; then
-              echo "Rollback success. System reverted to stable version."
-              exit 1 # Vẫn báo lỗi job để Developer biết deploy bị fail
+              echo "Rollback success."
+              exit 1
             else
-              echo "CRITICAL: Rollback failed! Both versions are Unhealthy."
+              echo "CRITICAL: Rollback failed!"
               exit 1
             fi
-          fi
+          }
