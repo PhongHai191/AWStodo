@@ -78,7 +78,16 @@ jobs:
 
           aws s3 cp docker-compose.yml \
             s3://$BUCKET/deploy/docker-compose.yml
-
+      - name: Capture Current Tag for Rollback
+        id: prev_info
+        run: |
+          PREV_TAG=$(aws ssm send-command \
+            --instance-ids ${{ secrets.WEBSERVER1ID }} \
+            --document-name "AWS-RunShellScript" \
+            --parameters '{"commands": ["docker inspect --format=\"{{index .Config.Image}}\" awstodo-backend | cut -d: -f2"]}' \
+            --query "CommandInvocations[0].CommandPlugins[0].Output" \
+            --output text | tr -d '\r\n')
+          echo "PREVIOUS_TAG=${PREV_TAG:-latest}" >> $GITHUB_ENV
       # Deploy via SSM
       - name: Deploy to Webservers via SSM
         run: |
@@ -101,26 +110,37 @@ jobs:
                 "rm .env"
               ]
             }'
-      - name: Verify Deployment Health
+      - name: Health Check and Rollback
         run: |
           URL="http://${{ secrets.LB_DNS }}/health"
-          echo "Starting health check at: $URL"
-          
-          MAX_RETRIES=15
-          WAIT_INTERVAL=10
-          
-          for i in $(seq 1 $MAX_RETRIES); do
-            # -s: im lặng, -o /dev/null: không in body, -w: in ra http_code
+          SUCCESS=false
+          for i in {1..8}; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 $URL || echo "000")
-            
             if [ "$STATUS" == "200" ]; then
-              echo " [SUCCESS] Application is live and healthy!"
-              exit 0
+              echo " New version is Healthy!"
+              SUCCESS=true
+              break
             fi
-            
-            echo " [Attempt $i/$MAX_RETRIES] Status: $STATUS. Retrying in ${WAIT_INTERVAL}s..."
-            sleep $WAIT_INTERVAL
+            echo " Attempt $i: Status $STATUS. Retrying in 10s..."
+            sleep 10
           done
-          
-          echo " [ERROR] Health check failed. Manual intervention required."
-          exit 1
+
+          if [ "$SUCCESS" = false ]; then
+            echo " Health check failed! Rolling back to Tag: ${{ env.PREVIOUS_TAG }}"
+            
+            aws ssm send-command \
+              --instance-ids "${{ secrets.WEBSERVER1ID }}" "${{ secrets.WEBSERVER2ID }}" \
+              --document-name "AWS-RunShellScript" \
+              --parameters '{
+                "commands": [
+                  "set -e",
+                  "cd /home/ec2-user/AWStodo",
+                  "aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose-${{ env.PREVIOUS_TAG }}.yml docker-compose.yml",
+                  "aws ssm get-parameters-by-path --path \"/todoapp/\" --with-decryption --query \"Parameters[*].[Name,Value]\" --output text | sed \"s|^/todoapp/||\" | awk '\''{print $1 \"=\" $2}'\'' > .env",
+                  "echo \"TAG=${{ env.PREVIOUS_TAG }}\" >> .env",
+                  "docker compose up -d --remove-orphans",
+                  "rm -f .env"
+                ]
+              }'
+            exit 1
+          fi
