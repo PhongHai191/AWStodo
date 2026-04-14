@@ -86,41 +86,29 @@ jobs:
             --instance-ids ${{ secrets.WEBSERVER1ID }} \
             --document-name "AWS-RunShellScript" \
             --comment "Deploy todo app" \
-            --parameters commands="
-              set -e
-              mkdir -p /home/ec2-user/AWStodo
-              cd /home/ec2-user/AWStodo
+            --parameters '{
+              "commands": [
+                "set -e",
+                "mkdir -p /home/ec2-user/AWStodo",
+                "cd /home/ec2-user/AWStodo",
 
-              # lấy compose latest
-              aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose.yml docker-compose.yml
+                "aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose.yml docker-compose.yml",
 
-              # login ECR
-              aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
-                | docker login --username AWS --password-stdin \
-                ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+                "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com",
 
-              PARAMS=(
-                DB_NAME
-                AWS_S3_BUCKET
-                JWT_ACCESS_SECRET
-                JWT_REFRESH_SECRET
-                REDIS_HOST
-                REFRESH_EXPIRE
-                ACCESS_EXPIRE
-                AWS_REGION
-              )
+                "export DB_NAME=$(aws ssm get-parameter --name /todoapp/DB_NAME --with-decryption --query Parameter.Value --output text)",
+                "export AWS_S3_BUCKET=$(aws ssm get-parameter --name /todoapp/AWS_S3_BUCKET --with-decryption --query Parameter.Value --output text)",
+                "export JWT_ACCESS_SECRET=$(aws ssm get-parameter --name /todoapp/JWT_ACCESS_SECRET --with-decryption --query Parameter.Value --output text)",
+                "export JWT_REFRESH_SECRET=$(aws ssm get-parameter --name /todoapp/JWT_REFRESH_SECRET --with-decryption --query Parameter.Value --output text)",
+                "export REDIS_HOST=$(aws ssm get-parameter --name /todoapp/REDIS_HOST --with-decryption --query Parameter.Value --output text)",
+                "export REFRESH_EXPIRE=$(aws ssm get-parameter --name /todoapp/REFRESH_EXPIRE --with-decryption --query Parameter.Value --output text)",
+                "export ACCESS_EXPIRE=$(aws ssm get-parameter --name /todoapp/ACCESS_EXPIRE --with-decryption --query Parameter.Value --output text)",
+                "export AWS_REGION=$(aws ssm get-parameter --name /todoapp/AWS_REGION --with-decryption --query Parameter.Value --output text)",
 
-              for param in \"\${PARAMS[@]}\"; do
-                export $param=\$(aws ssm get-parameter \
-                  --name \"/todoapp/$param\" \
-                  --with-decryption \
-                  --query \"Parameter.Value\" \
-                  --output text)
-              done
+                "export TAG=${{ github.sha }}",
 
-              export TAG=${{ github.sha }}
-
-              docker compose down --remove-orphans
-              docker compose pull
-              docker compose up -d --force-recreate
-            "
+                "docker compose down --remove-orphans",
+                "docker compose pull",
+                "docker compose up -d --force-recreate"
+              ]
+            }'
