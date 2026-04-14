@@ -176,7 +176,7 @@ jobs:
 
             echo "Checking $label..."
 
-            for i in $(seq 1 8); do
+            for i in $(seq 1 10); do # Tăng lên 10 lần cho chắc vì đợi AWS Secret hơi lâu
 
               STATUS_READY=$(curl -s -o /dev/null -w "%{http_code}" "$readiness_url")
               BODY_READY=$(curl -s --max-time 5 "$readiness_url")
@@ -188,17 +188,17 @@ jobs:
               echo "  READINESS: HTTP $STATUS_READY | Body: $BODY_READY"
               echo "  LIVENESS  : HTTP $STATUS_LIVE | Body: $BODY_LIVE"
 
-              if \
-                [ "$STATUS_READY" = "200" ] && echo "$BODY_READY" | grep -q '"status":"OK"' && \
-                [ "$STATUS_LIVE" = "200" ]; then
+              if [ "$STATUS_READY" = "200" ] && echo "$BODY_READY" | grep -q '"status":"OK"' && \
+                [ "$STATUS_LIVE" = "200" ] && echo "$BODY_LIVE" | grep -q "OK"; then
                 echo "$label is Healthy!"
                 return 0
               fi
 
+              echo "Not ready yet, retrying in 10s..."
               sleep 10
             done
 
-            echo "$label FAILED after 8 attempts"
+            echo "$label FAILED after attempts"
             return 1
           }
 
