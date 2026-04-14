@@ -164,14 +164,14 @@ jobs:
             }'
       - name: Health Check and Rollback
         run: |
-          URL="http://${{ secrets.LB_DNS }}/health"
+          URL="http://${{ secrets.LB_DNS }}/health/db"
 
           check_health() {
             local url=$1
             local label=$2
             echo "Checking $label..."
 
-            for i in $(seq 1 8); do
+            for i in $(seq 1 6); do
               BODY=$(curl -s --max-time 5 "$url")
               STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$url")
 
@@ -198,7 +198,16 @@ jobs:
             aws ssm send-command \
               --instance-ids "${{ secrets.WEBSERVER1ID }}" "${{ secrets.WEBSERVER2ID }}" \
               --document-name "AWS-RunShellScript" \
-              --parameters commands="set -ex,cd /home/ec2-user/AWStodo,aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose-${{ env.PREVIOUS_TAG }}.yml docker-compose.yml,aws ssm get-parameters-by-path --path /todoapp/ --with-decryption --query Parameters[*].[Name,Value] --output text | sed 's|^/todoapp/||' | sed 's|\t|=|' > .env,echo TAG=${{ env.PREVIOUS_TAG }} >> .env,docker compose up -d --remove-orphans,sleep 5,rm -f .env"
+              --parameters "commands=[
+                \"set -ex\",
+                \"cd /home/ec2-user/AWStodo\",
+                \"aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose-${{ env.PREVIOUS_TAG }}.yml docker-compose.yml\",
+                \"aws ssm get-parameters-by-path --path /todoapp/ --with-decryption --query 'Parameters[*].[Name,Value]' --output text | sed 's|^/todoapp/||' | sed 's|\\\\t|=|' > .env\",
+                \"echo TAG=${{ env.PREVIOUS_TAG }} >> .env\",
+                \"docker compose up -d --remove-orphans\",
+                \"sleep 10\",
+                \"rm -f .env\"
+              ]"
 
             echo "Waiting 10s..."
             sleep 10

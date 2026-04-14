@@ -2,18 +2,14 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
-router.get('/', async (req, res) => {
+router.get('/health/db', async (req, res) => {
   try {
-    await pool.query('SELECT 1');
-    res.status(200).json({
-      status: 'OK',
-      instanceId,
-    });
+    const client = await pool.connect();
+    client.release();
+
+    res.status(200).json({ status: 'OK' });
   } catch (err) {
-    res.status(500).json({
-      status: 'DB FAIL',
-      instanceId,
-    });
+    res.status(500).json({ status: 'DB FAIL' });
   }
 });
 
