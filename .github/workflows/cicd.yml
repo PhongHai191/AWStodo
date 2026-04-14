@@ -119,7 +119,7 @@ jobs:
             local url=$1
             local label=$2
             echo " Checking $label..."
-            for i in {1..12}; do
+            for i in {1..8 do
               # Lấy body và status code đồng thời
               RESPONSE=$(curl -s --max-time 5 "$url" || echo "FAILED")
               STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$url" || echo "000")
@@ -158,8 +158,8 @@ jobs:
                 ]
               }'
             
-            echo " Waiting 15s for rollback version to stabilize..."
-            sleep 15
+            echo " Waiting 10s for rollback version to stabilize..."
+            sleep 10
 
             if check_health "$URL" "PREVIOUS VERSION"; then
               echo "Rollback success. System reverted to stable version."
