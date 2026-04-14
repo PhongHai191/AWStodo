@@ -167,7 +167,7 @@ jobs:
           READINESS_URL="http://${{ secrets.LB_DNS }}/health/db"
           LIVENESS_URL="http://${{ secrets.LB_DNS }}/health"
 
-          sleep 10
+          sleep 20
 
           check_health() {
             local readiness_url=$1
