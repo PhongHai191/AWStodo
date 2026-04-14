@@ -113,21 +113,34 @@ jobs:
       - name: Health Check and Rollback
         run: |
           URL="http://${{ secrets.LB_DNS }}/health"
-          SUCCESS=false
-          for i in {1..8}; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" $URL || echo "000")
-            BODY=$(curl -s $URL)
+          
+          # Định nghĩa hàm check health chuyên sâu
+          check_health() {
+            local url=$1
+            local label=$2
+            echo " Checking $label..."
+            for i in {1..12}; do
+              # Lấy body và status code đồng thời
+              RESPONSE=$(curl -s --max-time 5 "$url" || echo "FAILED")
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$url" || echo "000")
+              
+              echo "   Attempt $i: HTTP $STATUS | Body: $RESPONSE"
 
-            if [ "$STATUS" == "200" ] && [[ "$BODY" == *"UP"* ]]; then
-              echo "Healthy"
-              exit 0
-            fi
-            echo " Attempt $i: Status $STATUS. Retrying in 10s..."
-            sleep 10
-          done
+              # Kiểm tra: Phải 200 OK VÀ status:UP VÀ database:UP
+              if [ "$STATUS" == "200" ] && echo "$RESPONSE" | grep -q '\"status\":\"UP\"' && echo "$RESPONSE" | grep -q '\"database\":\"UP\"'; then
+                echo "$label is Healthy!"
+                return 0
+              fi
+              sleep 10
+            done
+            return 1
+          }
 
-          if [ "$SUCCESS" = false ]; then
-            echo " Health check failed! Rolling back to Tag: ${{ env.PREVIOUS_TAG }}"
+          if check_health "$URL" "NEW VERSION"; then
+            echo " Deployment Successful!"
+            exit 0
+          else
+            echo " New version failed! Triggering Rollback to Tag: ${{ env.PREVIOUS_TAG }}..."
             
             aws ssm send-command \
               --instance-ids "${{ secrets.WEBSERVER1ID }}" "${{ secrets.WEBSERVER2ID }}" \
@@ -140,17 +153,19 @@ jobs:
                   "aws ssm get-parameters-by-path --path \"/todoapp/\" --with-decryption --query \"Parameters[*].[Name,Value]\" --output text | sed \"s|^/todoapp/||\" | awk '\''{print $1 \"=\" $2}'\'' > .env",
                   "echo \"TAG=${{ env.PREVIOUS_TAG }}\" >> .env",
                   "docker compose up -d --remove-orphans",
+                  "sleep 5",
                   "rm -f .env"
                 ]
               }'
-            echo " Waiting for Rollback to complete..."
+            
+            echo " Waiting 15s for rollback version to stabilize..."
+            sleep 15
 
-            echo " Checking health of PREVIOUS version..."
-            if check_health $URL; then
-              echo " Rollback successful. System is stable at old version."
-              exit 1 
+            if check_health "$URL" "PREVIOUS VERSION"; then
+              echo "Rollback success. System reverted to stable version."
+              exit 1 # Vẫn báo lỗi job để Developer biết deploy bị fail
             else
-              echo " CRITICAL: Rollback failed! Both new and old versions are Unhealthy."
+              echo "CRITICAL: Rollback failed! Both versions are Unhealthy."
               exit 1
             fi
           fi
