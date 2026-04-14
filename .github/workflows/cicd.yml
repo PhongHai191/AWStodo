@@ -41,7 +41,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # 🔐 OIDC
+      #  OIDC
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -54,21 +54,21 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 🐳 Build & Push backend
+      #  Build & Push backend
       - name: Build & Push backend
         run: |
           IMAGE=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/awstodo-backend
           docker build -t $IMAGE:${{ github.sha }} ./backend
           docker push $IMAGE:${{ github.sha }}
 
-      # 🐳 Build & Push nginx
+      #  Build & Push nginx
       - name: Build & Push nginx
         run: |
           IMAGE=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/awstodo-nginx
           docker build -t $IMAGE:${{ github.sha }} ./frontend
           docker push $IMAGE:${{ github.sha }}
 
-      # 📦 Upload docker-compose (version + latest)
+      #  Upload docker-compose (version + latest)
       - name: Upload compose to S3 (versioned)
         run: |
           BUCKET=${{ secrets.S3_BUCKET }}
@@ -80,59 +80,47 @@ jobs:
             s3://$BUCKET/deploy/docker-compose.yml
 
       # Deploy via SSM
-      - name: Deploy Webserver 1 via SSM
+      - name: Deploy to Webservers via SSM
         run: |
           aws ssm send-command \
-            --instance-ids ${{ secrets.WEBSERVER1ID }} \
+            --instance-ids "${{ secrets.WEBSERVER1ID }}" "${{ secrets.WEBSERVER2ID }}" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy todo app version ${{ github.sha }}" \
+            --comment "Deploy version ${{ github.sha }}" \
             --parameters '{
               "commands": [
                 "set -e",
                 "export HOME=/home/ec2-user",
-                "mkdir -p /home/ec2-user/AWStodo",
                 "cd /home/ec2-user/AWStodo",
-
-                "aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose.yml docker-compose.yml",
-
+                "aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose.yml .",
                 "aws ssm get-parameters-by-path --path \"/todoapp/\" --with-decryption --query \"Parameters[*].[Name,Value]\" --output text | sed \"s|^/todoapp/||\" | awk '\''{print $1 \"=\" $2}'\'' > .env",
-
                 "echo \"TAG=${{ github.sha }}\" >> .env",
-
                 "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com",
-
                 "docker compose pull",
                 "docker compose up -d --remove-orphans",
-
                 "docker image prune -f",
                 "rm .env"
               ]
             }'
-      - name: Deploy Webserver 2 via SSM
+      - name: Verify Deployment Health
         run: |
-          aws ssm send-command \
-            --instance-ids ${{ secrets.WEBSERVER2ID }} \
-            --document-name "AWS-RunShellScript" \
-            --comment "Deploy todo app version ${{ github.sha }}" \
-            --parameters '{
-              "commands": [
-                "set -e",
-                "export HOME=/home/ec2-user",
-                "mkdir -p /home/ec2-user/AWStodo",
-                "cd /home/ec2-user/AWStodo",
-
-                "aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose.yml docker-compose.yml",
-
-                "aws ssm get-parameters-by-path --path \"/todoapp/\" --with-decryption --query \"Parameters[*].[Name,Value]\" --output text | sed \"s|^/todoapp/||\" | awk '\''{print $1 \"=\" $2}'\'' > .env",
-
-                "echo \"TAG=${{ github.sha }}\" >> .env",
-
-                "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com",
-
-                "docker compose pull",
-                "docker compose up -d --remove-orphans",
-
-                "docker image prune -f",
-                "rm .env"
-              ]
-            }'
+          URL="http://${{ secrets.LB_DNS }}/health"
+          echo "Starting health check at: $URL"
+          
+          MAX_RETRIES=15
+          WAIT_INTERVAL=10
+          
+          for i in $(seq 1 $MAX_RETRIES); do
+            # -s: im lặng, -o /dev/null: không in body, -w: in ra http_code
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 $URL || echo "000")
+            
+            if [ "$STATUS" == "200" ]; then
+              echo " [SUCCESS] Application is live and healthy!"
+              exit 0
+            fi
+            
+            echo " [Attempt $i/$MAX_RETRIES] Status: $STATUS. Retrying in ${WAIT_INTERVAL}s..."
+            sleep $WAIT_INTERVAL
+          done
+          
+          echo " [ERROR] Health check failed. Manual intervention required."
+          exit 1

@@ -3,6 +3,7 @@ const noCache = require("./middleware/noCache");
 const app = express();
 
 app.use(express.json());
+app.use("/health", require("./routes/health"));
 app.use("/api", noCache);
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/todos", require("./routes/todo"));
