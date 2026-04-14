@@ -10,6 +10,7 @@ router.get('/db', async (req, res) => {
   try {
     const conn = await pool.getConnection();
     await conn.ping();
+    await conn.query("SELECT 1");
     conn.release();
 
     res.status(200).json({ status: 'OK' });
