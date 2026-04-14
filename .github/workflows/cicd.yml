@@ -165,7 +165,7 @@ jobs:
       - name: Health Check and Rollback
         run: |
           URL="http://${{ secrets.LB_DNS }}/health/db"
-
+          sleep 10
           check_health() {
           local url=$1
           local label=$2
