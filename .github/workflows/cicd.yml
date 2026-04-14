@@ -84,8 +84,6 @@ jobs:
               ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
             PARAMS=(
-              DB_USER
-              DB_HOST
               DB_NAME
               AWS_S3_BUCKET
               JWT_ACCESS_SECRET

@@ -5,13 +5,12 @@ let pool;
 
 const initPromise = (async () => {
   const secret = await getSecret("TestAWS");
-  console.log(secret);
   pool = new Pool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: secret.DB_PASS,
+    host: secret.host,
+    user: secret.username,
+    password: secret.password,
     database: process.env.DB_NAME,
-    port: 5432,
+    port: secret.port,
     ssl: { rejectUnauthorized: false },
   });
 
