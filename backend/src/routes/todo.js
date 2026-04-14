@@ -1,4 +1,5 @@
 const router = require("express").Router();
+const db = require("../db");
 const redis = require("../redis");
 const auth = require("../middleware/authMiddleware");
 
