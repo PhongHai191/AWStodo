@@ -101,7 +101,7 @@ jobs:
                 --query "Parameter.Value" \
                 --output text)
             done
-
+            echo "REDIS_HOST=[$REDIS_HOST]"
             # image tag
             export TAG=${{ github.sha }}
 
