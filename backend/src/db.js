@@ -3,7 +3,7 @@ const { getSecret } = require("./utils/ASM");
 
 let pool;
 
-async function initDB() {
+const initPromise = (async () => {
   const secret = await getSecret("TestAWS");
 
   pool = new Pool({
@@ -16,11 +16,13 @@ async function initDB() {
   });
 
   return pool;
-}
+})();
 
-function getDB() {
-  if (!pool) throw new Error("DB not initialized");
-  return pool;
-}
-
-module.exports = { initDB, getDB };
+module.exports = {
+  query: async (...args) => {
+    if (!pool) {
+      await initPromise; // 
+    }
+    return pool.query(...args);
+  },
+};
