@@ -4,7 +4,7 @@ const { getSecret } = require("./utils/ASM");
 let pool;
 
 const initPromise = (async () => {
-  const secret = await getSecret("TestAWSSS");
+  const secret = await getSecret("TestAWS");
   pool = new Pool({
     host: secret.host,
     user: secret.username,

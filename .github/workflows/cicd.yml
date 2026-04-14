@@ -192,7 +192,7 @@ jobs:
             local liveness_url=$2
             local label=$3
             echo "Checking $label..."
-            for i in $(seq 1 10); do
+            for i in $(seq 1 8); do
               STATUS_READY=$(curl -s -o /dev/null -w "%{http_code}" "$readiness_url")
               BODY_READY=$(curl -s --max-time 5 "$readiness_url")
               STATUS_LIVE=$(curl -s -o /dev/null -w "%{http_code}" "$liveness_url")
