@@ -8,7 +8,10 @@ router.get('/', (req, res) => {
 
 router.get('/db', async (req, res) => {
   try {
-    await pool.query('SELECT 1');
+    const conn = await pool.getConnection();
+    await conn.ping();
+    conn.release();
+
     res.status(200).json({ status: 'OK' });
   } catch (err) {
     console.error('DB health error:', err.message);
