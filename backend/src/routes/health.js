@@ -1,5 +1,5 @@
 const express = require('express');
-const router = express.Router();
+const router = express.ddRouter();
 
 router.get('/', (req, res) => {
     res.status(200).json({

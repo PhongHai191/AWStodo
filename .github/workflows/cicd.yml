@@ -143,5 +143,14 @@ jobs:
                   "rm -f .env"
                 ]
               }'
-            exit 1
+            echo " Waiting for Rollback to complete..."
+
+            echo " Checking health of PREVIOUS version..."
+            if check_health $URL; then
+              echo " Rollback successful. System is stable at old version."
+              exit 1 
+            else
+              echo " CRITICAL: Rollback failed! Both new and old versions are Unhealthy."
+              exit 1
+            fi
           fi
