@@ -79,8 +79,8 @@ jobs:
           aws s3 cp docker-compose.yml \
             s3://$BUCKET/deploy/docker-compose.yml
 
-      # 🚀 Deploy via SSM
-      - name: Deploy via SSM
+      # Deploy via SSM
+      - name: Deploy Webserver 1 via SSM
         run: |
           aws ssm send-command \
             --instance-ids ${{ secrets.WEBSERVER1ID }} \
@@ -105,5 +105,34 @@ jobs:
                 "docker compose up -d --remove-orphans",
 
                 "docker image prune -f"
+                "rm .env"
+              ]
+            }'
+      - name: Deploy Webserver 2 via SSM
+        run: |
+          aws ssm send-command \
+            --instance-ids ${{ secrets.WEBSERVER2ID }} \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy todo app version ${{ github.sha }}" \
+            --parameters '{
+              "commands": [
+                "set -e",
+                "export HOME=/home/ec2-user",
+                "mkdir -p /home/ec2-user/AWStodo",
+                "cd /home/ec2-user/AWStodo",
+
+                "aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose.yml docker-compose.yml",
+
+                "aws ssm get-parameters-by-path --path \"/todoapp/\" --with-decryption --query \"Parameters[*].[Name,Value]\" --output text | sed \"s|^/todoapp/||\" | awk '\''{print $1 \"=\" $2}'\'' > .env",
+
+                "echo \"TAG=${{ github.sha }}\" >> .env",
+
+                "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com",
+
+                "docker compose pull",
+                "docker compose up -d --remove-orphans",
+
+                "docker image prune -f"
+                "rm .env"
               ]
             }'
