@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
+router.get('/health', (req, res) => {
+  res.sendStatus(200);
+});
+
 router.get('/health/db', async (req, res) => {
   try {
     const client = await pool.connect();

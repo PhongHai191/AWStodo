@@ -167,26 +167,26 @@ jobs:
           URL="http://${{ secrets.LB_DNS }}/health/db"
 
           check_health() {
-            local url=$1
-            local label=$2
-            echo "Checking $label..."
+          local url=$1
+          local label=$2
+          echo "Checking $label..."
 
-            for i in $(seq 1 6); do
-              BODY=$(curl -s --max-time 5 "$url")
-              STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+          for i in $(seq 1 8); do
+            BODY=$(curl -s --max-time 5 "$url")
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$url")
 
-              echo "Attempt $i: HTTP $STATUS | Body: $BODY"
+            echo "Attempt $i: HTTP $STATUS | Body: $BODY"
 
-              if [ "$STATUS" = "200" ] && echo "$BODY" | grep -q '"status"[[:space:]]*:[[:space:]]*"OK"'; then
-                echo "$label is Healthy!"
-                return 0
-              fi
+            if [ "$STATUS" = "200" ] && echo "$BODY" | grep -q '"status":"OK"'; then
+              echo "$label is Healthy!"
+              return 0
+            fi
 
-              sleep 10
-            done
+            sleep 10
+          done
 
-            echo "$label FAILED after 8 attempts"
-            return 1
+          echo "$label FAILED after 8 attempts"
+          return 1
           }
 
           if check_health "$URL" "NEW VERSION"; then
