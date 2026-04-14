@@ -87,7 +87,6 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --comment "Deploy todo app" \
             --parameters '{
-              --parameters '{
               "commands": [
                 "set -e",
                 "mkdir -p /home/ec2-user/AWStodo",
