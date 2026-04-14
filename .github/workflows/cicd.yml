@@ -164,32 +164,45 @@ jobs:
             }'
       - name: Health Check and Rollback
         run: |
-          URL="http://${{ secrets.LB_DNS }}/health/db"
+          READINESS_URL="http://${{ secrets.LB_DNS }}/health/db"
+          LIVENESS_URL="http://${{ secrets.LB_DNS }}/health"
+
           sleep 10
+
           check_health() {
-          local url=$1
-          local label=$2
-          echo "Checking $label..."
+            local readiness_url=$1
+            local liveness_url=$2
+            local label=$3
 
-          for i in $(seq 1 8); do
-            BODY=$(curl -s --max-time 5 "$url")
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+            echo "Checking $label..."
 
-            echo "Attempt $i: HTTP $STATUS | Body: $BODY"
+            for i in $(seq 1 8); do
 
-            if [ "$STATUS" = "200" ] && echo "$BODY" | grep -q '"status":"OK"'; then
-              echo "$label is Healthy!"
-              return 0
-            fi
+              STATUS_READY=$(curl -s -o /dev/null -w "%{http_code}" "$readiness_url")
+              BODY_READY=$(curl -s --max-time 5 "$readiness_url")
 
-            sleep 10
-          done
+              STATUS_LIVE=$(curl -s -o /dev/null -w "%{http_code}" "$liveness_url")
+              BODY_LIVE=$(curl -s --max-time 5 "$liveness_url")
 
-          echo "$label FAILED after 8 attempts"
-          return 1
+              echo "Attempt $i:"
+              echo "  READINESS: HTTP $STATUS_READY | Body: $BODY_READY"
+              echo "  LIVENESS  : HTTP $STATUS_LIVE | Body: $BODY_LIVE"
+
+              if \
+                [ "$STATUS_READY" = "200" ] && echo "$BODY_READY" | grep -q '"status":"OK"' && \
+                [ "$STATUS_LIVE" = "200" ]; then
+                echo "$label is Healthy!"
+                return 0
+              fi
+
+              sleep 10
+            done
+
+            echo "$label FAILED after 8 attempts"
+            return 1
           }
 
-          if check_health "$URL" "NEW VERSION"; then
+          if check_health "$READINESS_URL" "$LIVENESS_URL" "NEW VERSION"; then
             echo "Deployment Successful!"
             exit 0
           else
@@ -212,7 +225,7 @@ jobs:
             echo "Waiting 10s..."
             sleep 10
 
-            if check_health "$URL" "PREVIOUS VERSION"; then
+            if check_health "$READINESS_URL" "$LIVENESS_URL" "PREVIOUS VERSION"; then
               echo "Rollback success"
               exit 1
             else
