@@ -5,7 +5,7 @@ let pool;
 
 const initPromise = (async () => {
   const secret = await getSecret("TestAWS");
-
+  console.log(secret);
   pool = new Pool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
