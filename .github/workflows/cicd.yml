@@ -156,7 +156,6 @@ jobs:
                 \"sleep 5\",
                 \"rm -f .env\"
               ]"
-              }'
 
             echo "Waiting 10s for rollback version..."
             sleep 10
