@@ -224,6 +224,7 @@ jobs:
                 \"aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose-${{ env.PREVIOUS_TAG }}.yml docker-compose.yml\",
                 \"aws ssm get-parameters-by-path --path /todoapp/ --with-decryption --query 'Parameters[*].[Name,Value]' --output text | sed 's|^/todoapp/||' | sed 's|\\\\t|=|' > .env\",
                 \"echo TAG=${{ env.PREVIOUS_TAG }} >> .env\",
+                \"docker compose down\",
                 \"docker compose pull\",
                 \"docker compose up -d --remove-orphans\",
                 \"sleep 10\",
