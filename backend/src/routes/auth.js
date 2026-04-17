@@ -3,6 +3,7 @@ const db = require("../db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const redis = require("../redis");
+const ms = require("ms");
 
 // REGISTER
 router.post("/register", async (req, res) => {
@@ -77,8 +78,8 @@ router.post("/login", async (req, res) => {
     process.env.JWT_REFRESH_SECRET,
     { expiresIn: process.env.REFRESH_EXPIRE }
   );
-
-  await redis.set(`refresh:${user.id}`, refreshToken);
+  const ttl = ms(process.env.REFRESH_EXPIRE) / 1000;
+  await redis.set(`refresh:${user.id}`, refreshToken, "EX", ttl);
 
   res.json({ accessToken, refreshToken });
 });
