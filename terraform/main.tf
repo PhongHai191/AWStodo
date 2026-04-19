@@ -1,0 +1,176 @@
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+
+  # Uncomment and configure for remote state
+  # backend "s3" {
+  #   bucket         = "your-terraform-state-bucket"
+  #   key            = "prod/terraform.tfstate"
+  #   region         = "ap-southeast-2"
+  #   dynamodb_table = "terraform-locks"
+  #   encrypt        = true
+  # }
+}
+
+provider "aws" {
+  region = var.aws_region
+
+  default_tags {
+    tags = {
+      Project     = var.project_name
+      Environment = var.environment
+      ManagedBy   = "Terraform"
+    }
+  }
+}
+
+# ─────────────────────────────────────────────
+# VPC
+# ─────────────────────────────────────────────
+module "vpc" {
+  source       = "./modules/vpc"
+  project_name = var.project_name
+  environment  = var.environment
+  vpc_cidr     = var.vpc_cidr
+}
+
+# ─────────────────────────────────────────────
+# Subnets
+# ─────────────────────────────────────────────
+module "subnets" {
+  source               = "./modules/subnets"
+  project_name         = var.project_name
+  environment          = var.environment
+  vpc_id               = module.vpc.vpc_id
+  availability_zones   = var.availability_zones
+  public_subnet_cidrs  = var.public_subnet_cidrs
+  private_app_cidrs    = var.private_app_cidrs
+  private_db_cidrs     = var.private_db_cidrs
+}
+
+# ─────────────────────────────────────────────
+# Internet Gateway
+# ─────────────────────────────────────────────
+module "igw" {
+  source       = "./modules/igw"
+  project_name = var.project_name
+  environment  = var.environment
+  vpc_id       = module.vpc.vpc_id
+  public_subnet_ids = module.subnets.public_subnet_ids
+}
+
+# ─────────────────────────────────────────────
+# NAT Gateway
+# ─────────────────────────────────────────────
+module "nat" {
+  source              = "./modules/nat"
+  project_name        = var.project_name
+  environment         = var.environment
+  public_subnet_id    = module.subnets.public_subnet_ids[0]
+  private_app_subnet_ids = module.subnets.private_app_subnet_ids
+  private_db_subnet_ids  = module.subnets.private_db_subnet_ids
+  vpc_id              = module.vpc.vpc_id
+}
+
+# ─────────────────────────────────────────────
+# Security Groups
+# ─────────────────────────────────────────────
+module "security_groups" {
+  source       = "./modules/security-groups"
+  project_name = var.project_name
+  environment  = var.environment
+  vpc_id       = module.vpc.vpc_id
+  trusted_ip   = var.trusted_ip
+}
+
+# ─────────────────────────────────────────────
+# WAF
+# ─────────────────────────────────────────────
+module "waf" {
+  source       = "./modules/waf"
+  project_name = var.project_name
+  environment  = var.environment
+}
+
+# ─────────────────────────────────────────────
+# ALB
+# ─────────────────────────────────────────────
+module "alb" {
+  source            = "./modules/alb"
+  project_name      = var.project_name
+  environment       = var.environment
+  vpc_id            = module.vpc.vpc_id
+  public_subnet_ids = module.subnets.public_subnet_ids
+  alb_sg_id         = module.security_groups.alb_sg_id
+  waf_acl_arn       = module.waf.waf_acl_arn
+}
+
+# ─────────────────────────────────────────────
+# IAM
+# ─────────────────────────────────────────────
+module "iam" {
+  source       = "./modules/iam"
+  project_name = var.project_name
+  environment  = var.environment
+  s3_bucket_arn = module.s3.bucket_arn
+  github_repo  = var.github_repo
+}
+
+# ─────────────────────────────────────────────
+# EC2
+# ─────────────────────────────────────────────
+module "ec2" {
+  source                  = "./modules/ec2"
+  project_name            = var.project_name
+  environment             = var.environment
+  private_app_subnet_ids  = module.subnets.private_app_subnet_ids
+  public_subnet_ids       = module.subnets.public_subnet_ids
+  web_sg_id               = module.security_groups.web_sg_id
+  bastion_sg_id           = module.security_groups.bastion_sg_id
+  alb_target_group_arn    = module.alb.target_group_arn
+  ec2_instance_profile    = module.iam.ec2_instance_profile_name
+  ami_id                  = var.ami_id
+  instance_type           = var.instance_type
+  key_name                = var.key_name
+}
+
+# ─────────────────────────────────────────────
+# Redis
+# ─────────────────────────────────────────────
+module "redis" {
+  source               = "./modules/redis"
+  project_name         = var.project_name
+  environment          = var.environment
+  private_app_subnet_ids = module.subnets.private_app_subnet_ids
+  redis_sg_id          = module.security_groups.redis_sg_id
+}
+
+# ─────────────────────────────────────────────
+# RDS
+# ─────────────────────────────────────────────
+module "rds" {
+  source               = "./modules/rds"
+  project_name         = var.project_name
+  environment          = var.environment
+  private_db_subnet_ids = module.subnets.private_db_subnet_ids
+  rds_sg_id            = module.security_groups.rds_sg_id
+  db_username          = var.db_username
+  db_password          = var.db_password
+  db_name              = var.db_name
+}
+
+# ─────────────────────────────────────────────
+# S3
+# ─────────────────────────────────────────────
+module "s3" {
+  source       = "./modules/s3"
+  project_name = var.project_name
+  environment  = var.environment
+  bucket_name  = var.s3_bucket_name
+}

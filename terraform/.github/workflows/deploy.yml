@@ -1,0 +1,83 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # Required for OIDC
+  contents: read
+
+env:
+  AWS_REGION: ap-southeast-2
+  S3_BUCKET: amzn-s3-my-avatar-bucket-529646246979-ap-southeast-2-an
+
+jobs:
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Authenticate via OIDC ──────────────────────────────────────────────
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ── Read config from SSM Parameter Store ──────────────────────────────
+      - name: Fetch SSM parameters
+        id: ssm
+        run: |
+          WEB_1=$(aws ssm get-parameter --name "/awstodo/prod/ec2/web1_instance_id" --query "Parameter.Value" --output text)
+          WEB_2=$(aws ssm get-parameter --name "/awstodo/prod/ec2/web2_instance_id" --query "Parameter.Value" --output text)
+          echo "web1_id=$WEB_1" >> $GITHUB_OUTPUT
+          echo "web2_id=$WEB_2" >> $GITHUB_OUTPUT
+
+      # ── Build & upload artifact to S3 /deploy ────────────────────────────
+      - name: Build application
+        run: |
+          # Replace with your actual build command
+          echo "Building application..."
+          # npm ci && npm run build
+
+      - name: Upload build artifact to S3
+        run: |
+          aws s3 sync ./dist s3://${{ env.S3_BUCKET }}/deploy/ \
+            --delete \
+            --sse AES256
+
+      # ── Deploy to EC2 via SSM Run Command ────────────────────────────────
+      - name: Deploy to Web Server 1
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ steps.ssm.outputs.web1_id }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters '{"commands":["aws s3 sync s3://${{ env.S3_BUCKET }}/deploy/ /app/ --sse AES256","cd /app && npm install --production","pm2 restart app || pm2 start app.js --name app"]}' \
+            --query "Command.CommandId" \
+            --output text)
+          echo "Command ID: $COMMAND_ID"
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ steps.ssm.outputs.web1_id }}"
+
+      - name: Deploy to Web Server 2
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ steps.ssm.outputs.web2_id }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters '{"commands":["aws s3 sync s3://${{ env.S3_BUCKET }}/deploy/ /app/ --sse AES256","cd /app && npm install --production","pm2 restart app || pm2 start app.js --name app"]}' \
+            --query "Command.CommandId" \
+            --output text)
+          echo "Command ID: $COMMAND_ID"
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ steps.ssm.outputs.web2_id }}"
+
+      - name: Deployment complete
+        run: echo "✅ Deployment finished successfully"

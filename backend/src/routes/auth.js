@@ -100,7 +100,6 @@ router.post("/logout", async (req, res) => {
 
     res.sendStatus(200);
   } catch {
-    // token sai vẫn cho logout (best practice)
     res.sendStatus(200);
   }
 });
