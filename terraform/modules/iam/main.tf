@@ -168,6 +168,38 @@ resource "aws_iam_role_policy" "gha_s3" {
   })
 }
 
+# ECR push access for GitHub Actions
+resource "aws_iam_role_policy" "gha_ecr" {
+  name = "${var.project_name}-${var.environment}-gha-ecr"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "ECRAuth"
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
+      },
+      {
+        Sid    = "ECRPush"
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:CompleteLayerUpload",
+          "ecr:InitiateLayerUpload",
+          "ecr:PutImage",
+          "ecr:UploadLayerPart",
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer"
+        ]
+        Resource = "arn:aws:ecr:*:*:repository/${var.project_name}-*"
+      }
+    ]
+  })
+}
+
 # SSM Run Command for EC2 deploy via SSM
 resource "aws_iam_role_policy" "gha_ssm" {
   name = "${var.project_name}-${var.environment}-gha-ssm"
