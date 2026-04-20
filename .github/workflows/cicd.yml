@@ -130,57 +130,73 @@ jobs:
 
           aws s3 cp docker-compose.yml \
             s3://$BUCKET/deploy/docker-compose.yml
-      - name: Capture Current Tag for Rollback
+      - name: Capture current tag for rollback
         id: prev_info
         run: |
-          # 1. Gửi lệnh hỏi trực tiếp Docker
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids ${{ secrets.WEBSERVER1ID }} \
             --document-name "AWS-RunShellScript" \
             --parameters '{"commands": ["docker ps --format \"{{.Image}}\" | grep backend | cut -d: -f2 || echo \"latest\""]}' \
             --query "Command.CommandId" --output text)
-          
-          echo "Waiting for SSM to finish..."
-          sleep 7 # Tăng lên 7s cho chắc chắn
-          
-          # 2. Lấy kết quả
+
+          sleep 7
+
           PREV_TAG=$(aws ssm get-command-invocation \
             --command-id "$COMMAND_ID" \
             --instance-id ${{ secrets.WEBSERVER1ID }} \
             --query "StandardOutputContent" --output text | tr -d '\r\n ')
-
-          # Làm sạch kết quả (loại bỏ khoảng trắng)
           PREV_TAG=$(echo $PREV_TAG | xargs)
+          [ -z "$PREV_TAG" ] || [ "$PREV_TAG" = "None" ] && PREV_TAG="latest"
 
-          if [ -z "$PREV_TAG" ] || [ "$PREV_TAG" = "None" ]; then
-            PREV_TAG="latest"
-          fi
-          
           echo "PREVIOUS_TAG=$PREV_TAG" >> $GITHUB_ENV
           echo "Detected previous tag: $PREV_TAG"
-      # Deploy via SSM
-      - name: Deploy to Webservers via SSM
+
+      # ── Ansible setup ──────────────────────────────────────────────────────────
+      - name: Install AWS session-manager-plugin
         run: |
-          aws ssm send-command \
-            --instance-ids "${{ secrets.WEBSERVER1ID }}" "${{ secrets.WEBSERVER2ID }}" \
-            --document-name "AWS-RunShellScript" \
-            --comment "Deploy version ${{ github.sha }}" \
-            --parameters '{
-              "commands": [
-                "set -e",
-                "export HOME=/home/ec2-user",
-                "cd /home/ec2-user/AWStodo",
-                "aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose.yml .",
-                "aws ssm get-parameters-by-path --path \"/todoapp/\" --with-decryption --query \"Parameters[*].[Name,Value]\" --output text | sed \"s|^/todoapp/||\" | awk '\''{print $1 \"=\" $2}'\'' > .env",
-                "echo \"TAG=${{ github.sha }}\" >> .env",
-                "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com",
-                "docker compose pull",
-                "docker compose up -d --remove-orphans",
-                "docker image prune -f",
-                "rm .env"
-              ]
-            }'
-      - name: Health Check and Rollback
+          curl -sSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o /tmp/smp.deb
+          sudo dpkg -i /tmp/smp.deb
+
+      - name: Install Ansible and collections
+        run: |
+          pip install ansible boto3 botocore
+          ansible-galaxy collection install -r ansible/requirements.yml
+
+      - name: Run setup playbook (install Docker — idempotent)
+        working-directory: ansible
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+        run: |
+          ansible-playbook -i inventories/dev playbooks/site.yml
+
+      # ── DB Init (idempotent — safe on every run) ───────────────────────────────
+      - name: Init database schema via Ansible
+        working-directory: ansible
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          DB_SECRET_NAME: ${{ secrets.DB_SECRET_NAME }}
+        run: |
+          ansible-playbook -i inventories/dev playbooks/db.yml --tags init
+
+      # ── Deploy via Ansible ──────────────────────────────────────────────────────
+      - name: Deploy webapp via Ansible
+        working-directory: ansible
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          IMAGE_TAG: ${{ github.sha }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+        run: |
+          ansible-playbook -i inventories/dev playbooks/web.yml
+
+      # ── Health check + rollback ─────────────────────────────────────────────────
+      - name: Health check and rollback
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
         run: |
           READINESS_URL="http://${{ secrets.LB_DNS }}/health/db"
           LIVENESS_URL="http://${{ secrets.LB_DNS }}/health"
@@ -188,20 +204,19 @@ jobs:
           sleep 20
 
           check_health() {
-            local readiness_url=$1
-            local liveness_url=$2
-            local label=$3
+            local label=$1
             echo "Checking $label..."
             for i in $(seq 1 8); do
-              STATUS_READY=$(curl -s -o /dev/null -w "%{http_code}" "$readiness_url")
-              BODY_READY=$(curl -s --max-time 5 "$readiness_url")
-              STATUS_LIVE=$(curl -s -o /dev/null -w "%{http_code}" "$liveness_url")
-              BODY_LIVE=$(curl -s --max-time 5 "$liveness_url")
-              
+              STATUS_READY=$(curl -s -o /dev/null -w "%{http_code}" "$READINESS_URL")
+              BODY_READY=$(curl -s --max-time 5 "$READINESS_URL")
+              STATUS_LIVE=$(curl -s -o /dev/null -w "%{http_code}" "$LIVENESS_URL")
+              BODY_LIVE=$(curl -s --max-time 5 "$LIVENESS_URL")
+
               echo "Attempt $i: READY=$STATUS_READY, LIVE=$STATUS_LIVE"
 
-              if [ "$STATUS_READY" = "200" ] && echo "$BODY_READY" | grep -q '"status":"OK"' && [ "$STATUS_LIVE" = "200" ] && echo "$BODY_LIVE" | grep -q "OK"; then
-                echo "$label is Healthy!"
+              if [ "$STATUS_READY" = "200" ] && echo "$BODY_READY" | grep -q '"status":"OK"' \
+                && [ "$STATUS_LIVE" = "200" ] && echo "$BODY_LIVE" | grep -q "OK"; then
+                echo "$label is healthy!"
                 return 0
               fi
               sleep 10
@@ -209,36 +224,22 @@ jobs:
             return 1
           }
 
-          if check_health "$READINESS_URL" "$LIVENESS_URL" "NEW VERSION"; then
-            echo "Deployment Successful!"
+          if check_health "NEW VERSION"; then
+            echo "Deployment successful!"
             exit 0
+          fi
+
+          echo "New version unhealthy — rolling back to ${{ env.PREVIOUS_TAG }} via Ansible..."
+          cd ansible
+          IMAGE_TAG=${{ env.PREVIOUS_TAG }} \
+            ansible-playbook -i inventories/dev playbooks/web.yml
+
+          sleep 15
+
+          if check_health "PREVIOUS VERSION"; then
+            echo "Rollback succeeded"
+            exit 1
           else
-            echo "New version failed! Triggering rollback..."
-
-            aws ssm send-command \
-              --instance-ids "${{ secrets.WEBSERVER1ID }}" "${{ secrets.WEBSERVER2ID }}" \
-              --document-name "AWS-RunShellScript" \
-              --parameters "commands=[
-                \"set -ex\",
-                \"cd /home/ec2-user/AWStodo\",
-                \"aws s3 cp s3://${{ secrets.S3_BUCKET }}/deploy/docker-compose-${{ env.PREVIOUS_TAG }}.yml docker-compose.yml\",
-                \"aws ssm get-parameters-by-path --path /todoapp/ --with-decryption --query 'Parameters[*].[Name,Value]' --output text | sed 's|^/todoapp/||' | sed 's|\\\\t|=|' > .env\",
-                \"echo TAG=${{ env.PREVIOUS_TAG }} >> .env\",
-                \"docker compose down\",
-                \"docker compose pull\",
-                \"docker compose --env-file .env up -d --force-recreate --remove-orphans\",
-                \"sleep 10\",
-                \"rm -f .env\"
-              ]"
-
-            echo "Waiting 10s..."
-            sleep 10
-
-            if check_health "$READINESS_URL" "$LIVENESS_URL" "PREVIOUS VERSION"; then
-              echo "Rollback success"
-              exit 1
-            else
-              echo "CRITICAL: Rollback failed"
-              exit 1
-            fi
+            echo "CRITICAL: rollback also failed"
+            exit 1
           fi

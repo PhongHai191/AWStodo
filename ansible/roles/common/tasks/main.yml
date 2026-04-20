@@ -1,0 +1,33 @@
+---
+- name: Update all packages
+  ansible.builtin.yum:
+    name: "*"
+    state: latest
+    update_cache: true
+  become: true
+
+- name: Install common utilities
+  ansible.builtin.yum:
+    name:
+      - curl
+      - wget
+      - unzip
+      - git
+      - htop
+    state: present
+  become: true
+
+- name: Set timezone to Asia/Ho_Chi_Minh
+  community.general.timezone:
+    name: Asia/Ho_Chi_Minh
+  become: true
+
+- name: Configure system limits for Docker
+  ansible.builtin.lineinfile:
+    path: /etc/security/limits.conf
+    line: "{{ item }}"
+    create: true
+  loop:
+    - "* soft nofile 65536"
+    - "* hard nofile 65536"
+  become: true

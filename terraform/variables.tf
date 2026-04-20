@@ -54,7 +54,7 @@ variable "trusted_ip" {
 variable "ami_id" {
   description = "AMI ID for EC2 instances (Amazon Linux 2023 recommended)"
   type        = string
-  default     = "ami-0c55b159cbfafe1f0" # Update to your region's AL2023 AMI
+  default     = "ami-0c55b159cbfafe1f0" 
 }
 
 variable "instance_type" {
@@ -90,7 +90,7 @@ variable "db_name" {
 variable "s3_bucket_name" {
   description = "Name of the S3 bucket"
   type        = string
-  default     = "awstodo-prod-avatar-529646246979-ap-southeast-2"
+  default     = "amzn-s3-my-avatar-bucket-529646246979-ap-southeast-2-an"
 }
 
 variable "github_repo" {

@@ -60,9 +60,32 @@ data "aws_iam_policy_document" "alb_logs" {
   }
 }
 
-# ── Target Group ──────────────────────────────────────────────────────────────
-resource "aws_lb_target_group" "app" {
-  name        = "${var.project_name}-${var.environment}-tg"
+# ── Target Group: Frontend (nginx port 80) ────────────────────────────────────
+resource "aws_lb_target_group" "frontend" {
+  name        = "${var.project_name}-${var.environment}-tg-fe"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "instance"
+
+  health_check {
+    enabled             = true
+    path                = "/"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    matcher             = "200"
+  }
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-tg-fe"
+  }
+}
+
+# ── Target Group: Backend (Node.js port 3000) ─────────────────────────────────
+resource "aws_lb_target_group" "backend" {
+  name        = "${var.project_name}-${var.environment}-tg-be"
   port        = 3000
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -79,11 +102,11 @@ resource "aws_lb_target_group" "app" {
   }
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-tg"
+    Name = "${var.project_name}-${var.environment}-tg-be"
   }
 }
 
-# ── HTTP Listener ─────────────────────────────────────────────────────────────
+# ── HTTP Listener (default → frontend) ───────────────────────────────────────
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
@@ -91,7 +114,24 @@ resource "aws_lb_listener" "http" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
+    target_group_arn = aws_lb_target_group.frontend.arn
+  }
+}
+
+# ── Listener Rule: /api/* → backend (Node.js) ────────────────────────────────
+resource "aws_lb_listener_rule" "backend" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 10
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/*"]
+    }
   }
 }
 

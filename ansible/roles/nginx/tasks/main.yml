@@ -1,0 +1,18 @@
+---
+- name: Wait for nginx container to be running
+  community.docker.docker_container_info:
+    name: nginx
+  register: nginx_info
+  until: nginx_info.exists and nginx_info.container['State']['Running']
+  retries: 12
+  delay: 5
+  become: true
+
+- name: Verify nginx responds on port 80
+  ansible.builtin.uri:
+    url: "http://localhost/health"
+    status_code: 200
+  register: health_result
+  retries: 5
+  delay: 5
+  until: health_result.status == 200

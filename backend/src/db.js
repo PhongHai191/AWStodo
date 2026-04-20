@@ -4,7 +4,8 @@ const { getSecret } = require("./utils/ASM");
 let pool;
 
 const initPromise = (async () => {
-  const secret = await getSecret("TestAWS");
+  const secretName = process.env.DB_SECRET_NAME || "awstodo/dev/db/credentials";
+  const secret = await getSecret(secretName);
   pool = new Pool({
     host: secret.host,
     user: secret.username,

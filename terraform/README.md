@@ -46,7 +46,7 @@ terraform/
     ├── alb/                 # ALB, target group, HTTP listener
     ├── ec2/                 # Bastion + 2 web servers
     ├── redis/               # ElastiCache Redis (single node)
-    ├── rds/                 # RDS PostgreSQL 15
+    ├── rds/                 # RDS PostgreSQL 177
     ├── s3/                  # Avatar/deploy bucket
     └── iam/                 # EC2 role, GitHub OIDC role
 ```

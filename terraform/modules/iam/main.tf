@@ -28,6 +28,12 @@ resource "aws_iam_role_policy_attachment" "ec2_cw" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
 
+# ECR read — required for docker pull from private ECR
+resource "aws_iam_role_policy_attachment" "ec2_ecr" {
+  role       = aws_iam_role.ec2.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
 # S3 access (avatars + deploy folders only)
 resource "aws_iam_role_policy" "ec2_s3" {
   name = "${var.project_name}-${var.environment}-ec2-s3"
@@ -48,7 +54,8 @@ resource "aws_iam_role_policy" "ec2_s3" {
         Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
         Resource = [
           "${var.s3_bucket_arn}/avatars/*",
-          "${var.s3_bucket_arn}/deploy/*"
+          "${var.s3_bucket_arn}/deploy/*",
+          "${var.s3_bucket_arn}/ansible-tmp/*"
         ]
       }
     ]
@@ -97,6 +104,10 @@ resource "aws_iam_role_policy" "ec2_ssm_params" {
 resource "aws_iam_instance_profile" "ec2" {
   name = "${var.project_name}-${var.environment}-ec2-profile"
   role = aws_iam_role.ec2.name
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -149,7 +160,8 @@ resource "aws_iam_role_policy" "gha_s3" {
         Action   = ["s3:GetObject", "s3:PutObject", "s3:ListBucket", "s3:DeleteObject"]
         Resource = [
           var.s3_bucket_arn,
-          "${var.s3_bucket_arn}/deploy/*"
+          "${var.s3_bucket_arn}/deploy/*",
+          "${var.s3_bucket_arn}/ansible-tmp/*"
         ]
       }
     ]
@@ -171,6 +183,18 @@ resource "aws_iam_role_policy" "gha_ssm" {
           "ssm:SendCommand",
           "ssm:GetCommandInvocation",
           "ssm:ListCommandInvocations"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "SSMSessionManager"
+        Effect = "Allow"
+        Action = [
+          "ssm:StartSession",
+          "ssm:TerminateSession",
+          "ssm:ResumeSession",
+          "ssm:DescribeSessions",
+          "ssm:GetConnectionStatus"
         ]
         Resource = "*"
       },

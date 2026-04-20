@@ -1,0 +1,40 @@
+---
+- name: Install Docker
+  ansible.builtin.yum:
+    name: docker
+    state: present
+  become: true
+
+- name: Start and enable Docker
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+  become: true
+
+- name: Add ec2-user to docker group
+  ansible.builtin.user:
+    name: ec2-user
+    groups: docker
+    append: true
+  become: true
+  notify: reset connection
+
+- name: Create Docker CLI plugins directory
+  ansible.builtin.file:
+    path: /usr/local/lib/docker/cli-plugins
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Install Docker Compose v2 plugin
+  ansible.builtin.get_url:
+    url: "https://github.com/docker/compose/releases/download/v2.24.7/docker-compose-linux-x86_64"
+    dest: /usr/local/lib/docker/cli-plugins/docker-compose
+    mode: "0755"
+  become: true
+
+- name: Verify docker compose
+  ansible.builtin.command: docker compose version
+  changed_when: false
+  become: true

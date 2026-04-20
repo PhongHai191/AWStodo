@@ -1,0 +1,16 @@
+---
+# Deploy webapp — run on every release
+# Usage: ansible-playbook -i inventories/dev playbooks/web.yml
+# Env vars required: AWS_ACCOUNT_ID, IMAGE_TAG, S3_BUCKET
+- name: Deploy webapp to web servers
+  hosts: webservers
+  gather_facts: false
+  become: false
+
+  vars:
+    aws_account_id: "{{ lookup('env', 'AWS_ACCOUNT_ID') }}"
+    image_tag: "{{ lookup('env', 'IMAGE_TAG') }}"
+
+  roles:
+    - app
+    - nginx

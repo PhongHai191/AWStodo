@@ -1,0 +1,39 @@
+---
+# Usage:
+#   Init schema (run once after terraform apply):
+#     ansible-playbook -i inventories/dev playbooks/db.yml --tags init
+#
+#   Check connectivity only:
+#     ansible-playbook -i inventories/dev playbooks/db.yml --tags check
+
+- name: Database operations
+  hosts: webservers
+  gather_facts: false
+  become: false
+  run_once: true
+
+  vars:
+    db_secret_name: "{{ lookup('env', 'DB_SECRET_NAME') | default('awstodo/dev/db/credentials') }}"
+
+  tasks:
+    - name: Init database schema
+      ansible.builtin.include_role:
+        name: db_init
+      tags: [init]
+
+    - name: Check DB connectivity from web server
+      ansible.builtin.shell:
+        cmd: >
+          docker exec $(docker ps -qf "name=backend")
+          node -e "const {Pool}=require('pg');const p=new Pool();
+                   p.query('SELECT 1').then(()=>{console.log('DB OK');p.end()})
+                   .catch(e=>{console.error(e.message);process.exit(1)});"
+      register: db_check
+      changed_when: false
+      become: true
+      tags: [check]
+
+    - name: Show connectivity result
+      ansible.builtin.debug:
+        msg: "{{ db_check.stdout }}"
+      tags: [check]

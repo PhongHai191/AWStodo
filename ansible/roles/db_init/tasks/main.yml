@@ -1,0 +1,48 @@
+---
+- name: Install PostgreSQL client
+  ansible.builtin.yum:
+    name: postgresql15
+    state: present
+  become: true
+
+- name: Fetch DB credentials from Secrets Manager
+  ansible.builtin.set_fact:
+    db_secret: "{{ lookup('amazon.aws.aws_secret', db_secret_name, region=aws_region) | from_json }}"
+
+- name: Copy init.sql to instance
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../database/init.sql"
+    dest: /tmp/db_init.sql
+    mode: "0600"
+
+- name: Wait for RDS to be ready
+  ansible.builtin.shell:
+    cmd: >
+      PGPASSWORD="{{ db_secret.password }}"
+      psql -h "{{ db_secret.host }}"
+           -U "{{ db_secret.username }}"
+           -d "{{ db_secret.dbname }}"
+           -c "SELECT 1"
+  register: rds_ping
+  until: rds_ping.rc == 0
+  retries: 30
+  delay: 10
+  changed_when: false
+  no_log: true
+  become: true
+
+- name: Run init.sql
+  ansible.builtin.shell:
+    cmd: >
+      PGPASSWORD="{{ db_secret.password }}"
+      psql -h "{{ db_secret.host }}"
+           -U "{{ db_secret.username }}"
+           -d "{{ db_secret.dbname }}"
+           -f /tmp/db_init.sql
+  no_log: true
+  become: true
+
+- name: Remove init.sql from instance
+  ansible.builtin.file:
+    path: /tmp/db_init.sql
+    state: absent

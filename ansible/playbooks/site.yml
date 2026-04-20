@@ -1,0 +1,11 @@
+---
+# Full provisioning — run once on new instances
+# Usage: ansible-playbook -i inventories/dev playbooks/site.yml
+- name: Provision web servers
+  hosts: webservers
+  gather_facts: true
+  become: false
+
+  roles:
+    - common
+    - docker
