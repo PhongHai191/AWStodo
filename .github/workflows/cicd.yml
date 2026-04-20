@@ -97,7 +97,7 @@ jobs:
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GithubActions
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/awstodo-dev-github-actions-role
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Test AWS identity
