@@ -4,6 +4,8 @@ services:
   backend:
     image: 529646246979.dkr.ecr.ap-southeast-2.amazonaws.com/awstodo-backend:${TAG}
     restart: always
+    ports:
+      - "3000:3000"
     environment:
       DB_SECRET_NAME: ${DB_SECRET_NAME}
       DB_NAME: ${DB_NAME}

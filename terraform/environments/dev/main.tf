@@ -147,10 +147,11 @@ module "ssm" {
   aws_region   = var.aws_region
   s3_bucket_name = var.s3_bucket_name
 
-  db_host     = split(":", module.rds.rds_endpoint)[0]
-  db_user     = var.db_username
-  db_password = var.db_password
-  db_name     = var.db_name
+  db_host        = split(":", module.rds.rds_endpoint)[0]
+  db_user        = var.db_username
+  db_password    = var.db_password
+  db_name        = var.db_name
+  db_secret_name = "${var.project_name}/${var.environment}/db/credentials"
 
   redis_host = module.redis.redis_endpoint
 

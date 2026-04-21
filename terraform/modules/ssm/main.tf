@@ -28,6 +28,12 @@ resource "aws_ssm_parameter" "db_name" {
   value = var.db_name
 }
 
+resource "aws_ssm_parameter" "db_secret_name" {
+  name  = "${local.path}/DB_SECRET_NAME"
+  type  = "String"
+  value = var.db_secret_name
+}
+
 resource "aws_ssm_parameter" "redis_host" {
   name  = "${local.path}/REDIS_HOST"
   type  = "String"
