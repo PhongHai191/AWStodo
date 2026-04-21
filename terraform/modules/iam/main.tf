@@ -96,7 +96,7 @@ resource "aws_iam_role_policy" "ec2_ssm_params" {
         "ssm:GetParameters",
         "ssm:GetParametersByPath"
       ]
-      Resource = "arn:aws:ssm:*:*:parameter/${var.project_name}/${var.environment}/*"
+      Resource = "arn:aws:ssm:*:*:parameter/${var.ssm_app_path}/*"
     }]
   })
 }
@@ -275,7 +275,7 @@ resource "aws_iam_role_policy" "gha_ssm_params" {
         "ssm:GetParameters",
         "ssm:GetParametersByPath"
       ]
-      Resource = "arn:aws:ssm:*:*:parameter/${var.project_name}/${var.environment}/*"
+      Resource = "arn:aws:ssm:*:*:parameter/${var.ssm_app_path}/*"
     }]
   })
 }
