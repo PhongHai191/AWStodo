@@ -1,7 +1,7 @@
 const { createClient } = require("redis");
 
 const client = createClient({
-  url: `rediss://${process.env.REDIS_HOST}:6379`,
+  url: `redis://${process.env.REDIS_HOST}:6379`,
 });
 
 client.on("error", (err) => {

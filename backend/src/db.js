@@ -16,7 +16,10 @@ const initPromise = (async () => {
   });
 
   return pool;
-})();
+})().catch((err) => {
+  console.error("DB init failed:", err.message);
+  throw err;
+});
 
 module.exports = {
   query: async (...args) => {
