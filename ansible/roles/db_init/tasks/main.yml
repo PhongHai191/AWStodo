@@ -26,12 +26,9 @@
 
 - name: Wait for RDS to be ready
   ansible.builtin.shell:
-    cmd: >
-      PGPASSWORD="{{ db_secret.password }}"
-      psql -h "{{ db_secret.host }}"
-           -U "{{ db_secret.username }}"
-           -d "{{ db_secret.dbname }}"
-           -c "SELECT 1"
+    cmd: "psql -h '{{ db_secret.host }}' -U '{{ db_secret.username }}' -d '{{ db_secret.dbname }}' -c 'SELECT 1'"
+  environment:
+    PGPASSWORD: "{{ db_secret.password }}"
   register: rds_ping
   until: rds_ping.rc == 0
   retries: 30
@@ -49,13 +46,9 @@
 
 - name: Run init.sql
   ansible.builtin.shell:
-    cmd: >
-      PGPASSWORD="{{ db_secret.password }}"
-      psql -h "{{ db_secret.host }}"
-           -U "{{ db_secret.username }}"
-           -d "{{ db_secret.dbname }}"
-           --set ON_ERROR_STOP=1
-           -f /tmp/db_init.sql
+    cmd: "psql -h '{{ db_secret.host }}' -U '{{ db_secret.username }}' -d '{{ db_secret.dbname }}' --set ON_ERROR_STOP=1 -f /tmp/db_init.sql"
+  environment:
+    PGPASSWORD: "{{ db_secret.password }}"
   register: init_result
   failed_when: init_result.rc != 0
   changed_when: false
@@ -76,12 +69,9 @@
 
 - name: Verify tables were created
   ansible.builtin.shell:
-    cmd: >
-      PGPASSWORD="{{ db_secret.password }}"
-      psql -h "{{ db_secret.host }}"
-           -U "{{ db_secret.username }}"
-           -d "{{ db_secret.dbname }}"
-           -c "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename;"
+    cmd: "psql -h '{{ db_secret.host }}' -U '{{ db_secret.username }}' -d '{{ db_secret.dbname }}' -c \"SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename;\""
+  environment:
+    PGPASSWORD: "{{ db_secret.password }}"
   register: tables_result
   changed_when: false
   no_log: true
