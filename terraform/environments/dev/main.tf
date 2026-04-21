@@ -141,10 +141,10 @@ module "s3" {
 # ── SSM Parameters ─────────────────────────────────────────────────────────────
 
 module "ssm" {
-  source       = "../../modules/ssm"
-  environment  = var.environment
-  kms_key_arn  = module.kms.secrets_kms_key_arn
-  aws_region   = var.aws_region
+  source         = "../../modules/ssm"
+  environment    = var.environment
+  kms_key_arn    = module.kms.secrets_kms_key_arn
+  aws_region     = var.aws_region
   s3_bucket_name = var.s3_bucket_name
 
   db_host        = split(":", module.rds.rds_endpoint)[0]
@@ -155,6 +155,19 @@ module "ssm" {
 
   redis_host = module.redis.redis_endpoint
 
-  jwt_access_secret  = var.jwt_access_secret
-  jwt_refresh_secret = var.jwt_refresh_secret
+  jwt_access_secret      = var.jwt_access_secret
+  jwt_refresh_secret     = var.jwt_refresh_secret
+  grafana_admin_password = var.grafana_admin_password
+}
+
+# ── Monitoring ─────────────────────────────────────────────────────────────────
+module "monitoring" {
+  source               = "../../modules/monitoring"
+  project_name         = var.project_name
+  environment          = var.environment
+  ami_id               = var.ami_id
+  kms_key_arn          = module.kms.secrets_kms_key_arn
+  public_subnet_id     = module.network.public_subnet_ids[1]
+  monitoring_sg_id     = module.security_groups.monitoring_sg_id
+  ec2_instance_profile = module.iam.ec2_instance_profile_name
 }

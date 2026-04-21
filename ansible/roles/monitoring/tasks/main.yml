@@ -1,0 +1,70 @@
+---
+- name: Create monitoring directory
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: ec2-user
+    group: ec2-user
+    mode: "0750"
+  become: true
+
+- name: Create Grafana provisioning directory
+  ansible.builtin.file:
+    path: "{{ app_dir }}/grafana/provisioning/datasources"
+    state: directory
+    owner: ec2-user
+    group: ec2-user
+    mode: "0755"
+  become: true
+
+- name: Copy docker-compose.monitoring.yml
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../docker-compose.monitoring.yml"
+    dest: "{{ app_dir }}/docker-compose.yml"
+    owner: ec2-user
+    group: ec2-user
+    mode: "0640"
+  become: true
+
+- name: Copy Grafana datasource provisioning
+  ansible.builtin.copy:
+    src: grafana-datasource.yml
+    dest: "{{ app_dir }}/grafana/provisioning/datasources/prometheus.yml"
+    owner: ec2-user
+    group: ec2-user
+    mode: "0644"
+  become: true
+
+- name: Fetch SSM parameters
+  ansible.builtin.set_fact:
+    ssm_app_params: >-
+      {{ lookup('amazon.aws.aws_ssm', ssm_params_path,
+                region=aws_region,
+                bypath=True,
+                shortnames=True,
+                decrypt=True) }}
+
+- name: Write .env file
+  ansible.builtin.template:
+    src: monitoring.env.j2
+    dest: "{{ app_dir }}/.env"
+    owner: ec2-user
+    group: ec2-user
+    mode: "0600"
+  become: true
+
+- name: Render prometheus.yml
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ app_dir }}/prometheus.yml"
+    owner: ec2-user
+    group: ec2-user
+    mode: "0644"
+  become: true
+
+- name: Deploy monitoring stack
+  ansible.builtin.shell:
+    cmd: docker compose up -d --remove-orphans
+    chdir: "{{ app_dir }}"
+  become: true
+  changed_when: true

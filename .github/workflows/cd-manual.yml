@@ -1,0 +1,72 @@
+name: Manual Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        type: choice
+        options: [dev, staging, production]
+        default: dev
+      image_tag:
+        description: "Image tag to deploy (git SHA). Empty = most recently pushed tag in ECR."
+        type: string
+        required: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/awstodo-${{ inputs.environment }}-github-actions-role
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Test AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Resolve image tag
+        id: resolve_tag
+        run: |
+          if [ -n "${{ inputs.image_tag }}" ]; then
+            TAG="${{ inputs.image_tag }}"
+          else
+            TAG=$(aws ecr describe-images \
+              --repository-name awstodo-backend \
+              --region ${{ secrets.AWS_REGION }} \
+              --query 'sort_by(imageDetails,&imagePushedAt)[-1].imageTags[0]' \
+              --output text)
+          fi
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "Deploying tag: $TAG to ${{ inputs.environment }}"
+
+      - name: Install AWS session-manager-plugin
+        run: |
+          curl -sSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o /tmp/smp.deb
+          sudo dpkg -i /tmp/smp.deb
+
+      - name: Install Ansible and collections
+        run: |
+          pip install ansible boto3 botocore
+          ansible-galaxy collection install -r ansible/requirements.yml
+
+      - name: Deploy via Ansible
+        working-directory: ansible
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          IMAGE_TAG: ${{ env.TAG }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+        run: |
+          ansible-playbook -i inventories/${{ inputs.environment }} playbooks/web.yml
+
+    

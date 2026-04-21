@@ -13,3 +13,4 @@ hostnames:
 
 groups:
   webservers: "tags.Role == 'web'"
+  monitoring: "tags.Role == 'monitoring'"

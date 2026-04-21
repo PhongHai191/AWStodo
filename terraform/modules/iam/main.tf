@@ -104,6 +104,22 @@ resource "aws_iam_role_policy" "ec2_ssm_params" {
   })
 }
 
+# EC2 describe — required for Prometheus EC2 service discovery on monitoring host
+resource "aws_iam_role_policy" "ec2_describe" {
+  name = "${var.project_name}-${var.environment}-ec2-describe"
+  role = aws_iam_role.ec2.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid      = "EC2DescribeForPrometheusSD"
+      Effect   = "Allow"
+      Action   = ["ec2:DescribeInstances"]
+      Resource = "*"
+    }]
+  })
+}
+
 resource "aws_iam_instance_profile" "ec2" {
   name = "${var.project_name}-${var.environment}-ec2-profile"
   role = aws_iam_role.ec2.name

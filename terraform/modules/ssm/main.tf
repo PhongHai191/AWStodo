@@ -77,3 +77,10 @@ resource "aws_ssm_parameter" "s3_bucket" {
   type  = "String"
   value = var.s3_bucket_name
 }
+
+resource "aws_ssm_parameter" "grafana_admin_password" {
+  name   = "${local.path}/GRAFANA_ADMIN_PASSWORD"
+  type   = "SecureString"
+  value  = var.grafana_admin_password
+  key_id = var.kms_key_arn
+}

@@ -1,0 +1,13 @@
+---
+# Deploy monitoring stack (Prometheus + Grafana + exporters)
+# Usage: ansible-playbook -i inventories/dev playbooks/monitoring.yml
+# Env vars required: S3_BUCKET
+
+- name: Deploy monitoring stack
+  hosts: monitoring
+  gather_facts: false
+  become: false
+
+  roles:
+    - docker
+    - monitoring
