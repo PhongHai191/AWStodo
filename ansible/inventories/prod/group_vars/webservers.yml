@@ -11,3 +11,4 @@ ansible_user: ec2-user
 app_dir: /home/ec2-user/AWStodo
 aws_region: "ap-southeast-2"
 ssm_params_path: "/todoapp/prod/"
+db_credentials_secret_name: "awstodo/production/db/credentials"

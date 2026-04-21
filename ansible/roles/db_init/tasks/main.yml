@@ -14,6 +14,7 @@
     src: "{{ playbook_dir }}/../../database/init.sql"
     dest: /tmp/db_init.sql
     mode: "0600"
+  become: true
 
 - name: Wait for RDS to be ready
   ansible.builtin.shell:
@@ -39,6 +40,9 @@
            -U "{{ db_secret.username }}"
            -d "{{ db_secret.dbname }}"
            -f /tmp/db_init.sql
+  register: init_result
+  failed_when: init_result.rc != 0
+  changed_when: false
   no_log: true
   become: true
 
@@ -46,3 +50,4 @@
   ansible.builtin.file:
     path: /tmp/db_init.sql
     state: absent
+  become: true

@@ -13,7 +13,7 @@
   run_once: true
 
   vars:
-    db_secret_name: "{{ lookup('env', 'DB_SECRET_NAME') | default('awstodo/dev/db/credentials') }}"
+    db_secret_name: "{{ db_credentials_secret_name }}"
 
   tasks:
     - name: Init database schema
