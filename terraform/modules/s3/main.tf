@@ -51,6 +51,19 @@ resource "aws_s3_bucket_lifecycle_configuration" "main" {
   }
 }
 
+# ── CORS – required for browser presigned-URL PUT uploads ─────────────────────
+resource "aws_s3_bucket_cors_configuration" "main" {
+  bucket = aws_s3_bucket.main.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET", "PUT", "HEAD", "DELETE"]
+    allowed_origins = ["*"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3600
+  }
+}
+
 # ── Pre-create /avatars and /deploy "folders" via placeholder objects ──────────
 resource "aws_s3_object" "avatars_folder" {
   bucket  = aws_s3_bucket.main.id
