@@ -3,7 +3,6 @@ regions:
   - ap-southeast-2
 
 filters:
-  tag:Role: web
   tag:Project: awstodo
   tag:Environment: dev
   instance-state-name: running
