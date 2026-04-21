@@ -19,6 +19,8 @@
     - name: Init database schema
       ansible.builtin.include_role:
         name: db_init
+        apply:
+          tags: [init]
       tags: [init]
 
     - name: Check DB connectivity from web server
