@@ -161,7 +161,8 @@ resource "aws_iam_role_policy" "gha_s3" {
         Resource = [
           var.s3_bucket_arn,
           "${var.s3_bucket_arn}/deploy/*",
-          "${var.s3_bucket_arn}/ansible-tmp/*"
+          "${var.s3_bucket_arn}/ansible-tmp/*",
+          "${var.s3_bucket_arn}/i-*"
         ]
       }
     ]
