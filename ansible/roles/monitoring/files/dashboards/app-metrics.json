@@ -142,7 +142,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total[5m])) by (method, route)",
+          "expr": "sum(rate(http_requests_total{route!~\"/metrics|/health.*\"}[5m])) by (method, route)",
           "legendFormat": "{{method}} {{route}}",
           "refId": "A"
         }
@@ -170,7 +170,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total[5m])) by (status_code)",
+          "expr": "sum(rate(http_requests_total{route!~\"/metrics|/health.*\"}[5m])) by (status_code)",
           "legendFormat": "{{status_code}}",
           "refId": "A"
         }
@@ -212,7 +212,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total[5m])) by (method)",
+          "expr": "sum(rate(http_requests_total{route!~\"/metrics|/health.*\"}[5m])) by (method)",
           "legendFormat": "{{method}}",
           "refId": "A"
         }
@@ -236,7 +236,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "sort_desc(sum by (method, route, status_code) (increase(http_requests_total[1h])))",
+          "expr": "sort_desc(sum by (method, route, status_code) (increase(http_requests_total{route!~\"/metrics|/health.*\"}[1h])))",
           "refId": "A",
           "instant": true,
           "format": "table"
