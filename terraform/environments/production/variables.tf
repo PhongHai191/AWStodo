@@ -34,3 +34,12 @@ variable "db_instance_class" { type = string }
 
 variable "s3_bucket_name" { type = string }
 variable "github_repo"    { type = string }
+
+variable "jwt_access_secret" {
+  type      = string
+  sensitive = true
+}
+variable "jwt_refresh_secret" {
+  type      = string
+  sensitive = true
+}

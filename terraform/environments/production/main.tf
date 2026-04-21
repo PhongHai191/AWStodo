@@ -136,3 +136,22 @@ module "s3" {
   environment  = var.environment
   bucket_name  = var.s3_bucket_name
 }
+
+# ── SSM Parameters ─────────────────────────────────────────────────────────────
+module "ssm" {
+  source         = "../../modules/ssm"
+  environment    = var.environment
+  kms_key_arn    = module.kms.secrets_kms_key_arn
+  aws_region     = var.aws_region
+  s3_bucket_name = var.s3_bucket_name
+
+  db_host     = split(":", module.rds.rds_endpoint)[0]
+  db_user     = var.db_username
+  db_password = var.db_password
+  db_name     = var.db_name
+
+  redis_host = module.redis.redis_endpoint
+
+  jwt_access_secret  = var.jwt_access_secret
+  jwt_refresh_secret = var.jwt_refresh_secret
+}
