@@ -15,6 +15,7 @@
       - git
       - htop
     state: present
+    allowerasing: true
   become: true
 
 - name: Set timezone to Asia/Ho_Chi_Minh
