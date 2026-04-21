@@ -82,11 +82,12 @@ module "alb" {
 
 # ── IAM ────────────────────────────────────────────────────────────────────────
 module "iam" {
-  source        = "../../modules/iam"
-  project_name  = var.project_name
-  environment   = var.environment
-  s3_bucket_arn = module.s3.bucket_arn
-  github_repo   = var.github_repo
+  source               = "../../modules/iam"
+  project_name         = var.project_name
+  environment          = var.environment
+  s3_bucket_arn        = module.s3.bucket_arn
+  github_repo          = var.github_repo
+  secrets_kms_key_arn  = module.kms.secrets_kms_key_arn
 }
 
 # ── EC2 ────────────────────────────────────────────────────────────────────────

@@ -263,6 +263,22 @@ resource "aws_iam_role_policy" "gha_secrets" {
   })
 }
 
+# KMS decrypt for GitHub Actions — needed to read SecureString SSM parameters
+resource "aws_iam_role_policy" "gha_kms" {
+  name = "${var.project_name}-${var.environment}-gha-kms"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid    = "KMSDecryptSSMParams"
+      Effect = "Allow"
+      Action = ["kms:Decrypt", "kms:GenerateDataKey"]
+      Resource = var.secrets_kms_key_arn
+    }]
+  })
+}
+
 # SSM Parameter Store read for GitHub Actions
 resource "aws_iam_role_policy" "gha_ssm_params" {
   name = "${var.project_name}-${var.environment}-gha-ssm-params"
