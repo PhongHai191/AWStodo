@@ -176,9 +176,8 @@ jobs:
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           S3_BUCKET: ${{ secrets.S3_BUCKET }}
-          DB_SECRET_NAME: ${{ secrets.DB_SECRET_NAME }}
         run: |
-          ansible-playbook -i inventories/dev playbooks/db.yml --tags init
+          ansible-playbook -i inventories/dev playbooks/db.yml --tags init -v
 
       # ── Deploy via Ansible ──────────────────────────────────────────────────────
       - name: Deploy webapp via Ansible

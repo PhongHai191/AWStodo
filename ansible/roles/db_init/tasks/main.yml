@@ -9,6 +9,14 @@
   ansible.builtin.set_fact:
     db_secret: "{{ lookup('amazon.aws.aws_secret', db_secret_name, region=aws_region) | from_json }}"
 
+- name: Debug - resolved DB connection info
+  ansible.builtin.debug:
+    msg:
+      - "host    : {{ db_secret.host }}"
+      - "username: {{ db_secret.username }}"
+      - "dbname  : {{ db_secret.dbname }}"
+      - "port    : {{ db_secret.port }}"
+
 - name: Copy init.sql to instance
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../../database/init.sql"
@@ -32,6 +40,13 @@
   no_log: true
   become: true
 
+- name: Debug - RDS ping result
+  ansible.builtin.debug:
+    msg:
+      - "rc    : {{ rds_ping.rc }}"
+      - "stdout: {{ rds_ping.stdout }}"
+      - "stderr: {{ rds_ping.stderr }}"
+
 - name: Run init.sql
   ansible.builtin.shell:
     cmd: >
@@ -39,12 +54,42 @@
       psql -h "{{ db_secret.host }}"
            -U "{{ db_secret.username }}"
            -d "{{ db_secret.dbname }}"
+           --set ON_ERROR_STOP=1
            -f /tmp/db_init.sql
   register: init_result
   failed_when: init_result.rc != 0
   changed_when: false
   no_log: true
   become: true
+
+- name: Debug - init.sql stdout
+  ansible.builtin.debug:
+    msg: "{{ init_result.stdout_lines }}"
+
+- name: Debug - init.sql stderr
+  ansible.builtin.debug:
+    msg: "{{ init_result.stderr_lines }}"
+
+- name: Debug - init.sql exit code
+  ansible.builtin.debug:
+    msg: "psql exited with rc={{ init_result.rc }}"
+
+- name: Verify tables were created
+  ansible.builtin.shell:
+    cmd: >
+      PGPASSWORD="{{ db_secret.password }}"
+      psql -h "{{ db_secret.host }}"
+           -U "{{ db_secret.username }}"
+           -d "{{ db_secret.dbname }}"
+           -c "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename;"
+  register: tables_result
+  changed_when: false
+  no_log: true
+  become: true
+
+- name: Debug - public tables after init
+  ansible.builtin.debug:
+    msg: "{{ tables_result.stdout_lines }}"
 
 - name: Remove init.sql from instance
   ansible.builtin.file:
