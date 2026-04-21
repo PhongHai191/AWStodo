@@ -28,7 +28,7 @@
       "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
-        { "expr": "sum(rate(http_requests_total[5m]))", "refId": "A" }
+        { "expr": "sum(rate(http_requests_total{route!~\"/metrics|/health.*\"}[5m]))", "refId": "A" }
       ],
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
@@ -55,7 +55,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{status_code=~\"[45]..\"}[5m])) / sum(rate(http_requests_total[5m])) * 100",
+          "expr": "sum(rate(http_requests_total{status_code=~\"[45]..\",route!~\"/metrics|/health.*\"}[5m])) / sum(rate(http_requests_total{route!~\"/metrics|/health.*\"}[5m])) * 100",
           "refId": "A"
         }
       ],
@@ -85,7 +85,7 @@
       "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
-        { "expr": "sum(increase(http_requests_total[1h]))", "refId": "A" }
+        { "expr": "sum(increase(http_requests_total{route!~\"/metrics|/health.*\"}[1h]))", "refId": "A" }
       ],
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
@@ -111,7 +111,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "count(count by (instance) (http_requests_total))",
+          "expr": "count(count by (instance) (http_requests_total{route!~\"/metrics|/health.*\"}))",
           "refId": "A"
         }
       ],
