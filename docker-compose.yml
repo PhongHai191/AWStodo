@@ -54,6 +54,13 @@ services:
       - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
     ports:
       - "9100:9100"
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: /todoapp/${ENVIRONMENT}/docker
+        awslogs-stream: "node-exporter-${INSTANCE_ID}"
+        awslogs-create-group: "true"
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
@@ -67,3 +74,10 @@ services:
       - /dev/disk/:/dev/disk:ro
     ports:
       - "8080:8080"
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: /todoapp/${ENVIRONMENT}/docker
+        awslogs-stream: "cadvisor-${INSTANCE_ID}"
+        awslogs-create-group: "true"

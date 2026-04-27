@@ -1,6 +1,19 @@
 ---
+- name: Install rsyslog (creates /var/log/messages on AL2023)
+  ansible.builtin.dnf:
+    name: rsyslog
+    state: present
+  become: true
+
+- name: Enable and start rsyslog
+  ansible.builtin.service:
+    name: rsyslog
+    state: started
+    enabled: true
+  become: true
+
 - name: Install CloudWatch Agent
-  ansible.builtin.yum:
+  ansible.builtin.dnf:
     name: amazon-cloudwatch-agent
     state: present
   become: true
@@ -13,6 +26,7 @@
     group: root
     mode: "0644"
   become: true
+  notify: Restart CloudWatch Agent
 
 - name: Apply config and start CloudWatch Agent
   ansible.builtin.command: >
