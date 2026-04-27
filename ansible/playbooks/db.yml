@@ -1,10 +1,3 @@
----
-# Usage:
-#   Init schema (run once after terraform apply):
-#     ansible-playbook -i inventories/dev playbooks/db.yml --tags init
-#
-#   Check connectivity only:
-#     ansible-playbook -i inventories/dev playbooks/db.yml --tags check
 
 - name: Database operations
   hosts: webservers

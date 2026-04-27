@@ -1,9 +1,8 @@
 const jwt = require("jsonwebtoken");
+const logger = require("../utils/logger");
 
 module.exports = (req, res, next) => {
   const authHeader = req.headers.authorization;
-
-  console.log("AUTH HEADER:", authHeader);
 
   if (!authHeader) return res.sendStatus(401);
 
@@ -11,12 +10,10 @@ module.exports = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
-
     req.user = decoded;
-
     next();
   } catch (err) {
-    console.log("JWT ERROR:", err.message);
+    logger.warn("jwt_verify_failed", { error: err.message, path: req.path });
     return res.sendStatus(403);
   }
 };

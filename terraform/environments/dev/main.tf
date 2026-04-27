@@ -160,6 +160,14 @@ module "ssm" {
   grafana_admin_password = var.grafana_admin_password
 }
 
+# ── CloudWatch Logging ─────────────────────────────────────────────────────────
+module "cloudwatch" {
+  source       = "../../modules/cloudwatch"
+  project_name = var.project_name
+  environment  = var.environment
+  alert_email  = var.alert_email
+}
+
 # ── Monitoring ─────────────────────────────────────────────────────────────────
 module "monitoring" {
   source               = "../../modules/monitoring"

@@ -47,3 +47,9 @@ variable "grafana_admin_password" {
   type      = string
   sensitive = true
 }
+
+variable "alert_email" {
+  type        = string
+  default     = ""
+  description = "Email for CloudWatch alarm notifications. Leave empty to skip."
+}

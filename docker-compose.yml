@@ -16,6 +16,13 @@ services:
       ACCESS_EXPIRE: ${ACCESS_EXPIRE}
       REFRESH_EXPIRE: ${REFRESH_EXPIRE}
       AWS_REGION: ${AWS_REGION}
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: /todoapp/${ENVIRONMENT}/backend
+        awslogs-stream: "{{ .Name }}"
+        awslogs-create-group: "true"
 
   nginx:
     image: 529646246979.dkr.ecr.ap-southeast-2.amazonaws.com/awstodo-nginx:${TAG}
@@ -25,6 +32,13 @@ services:
       - "80:80"
     depends_on:
       - backend
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: /todoapp/${ENVIRONMENT}/nginx
+        awslogs-stream: "{{ .Name }}"
+        awslogs-create-group: "true"
 
   node_exporter:
     image: prom/node-exporter:latest

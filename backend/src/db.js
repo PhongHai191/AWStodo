@@ -1,5 +1,6 @@
 const { Pool } = require("pg");
 const { getSecret } = require("./utils/ASM");
+const logger = require("./utils/logger");
 
 let pool;
 
@@ -15,16 +16,21 @@ const initPromise = (async () => {
     ssl: { rejectUnauthorized: false },
   });
 
+  pool.on("error", (err) => {
+    logger.error("db_pool_error", { error: err.message });
+  });
+
+  logger.info("db_connected", { host: secret.host, database: process.env.DB_NAME });
   return pool;
 })().catch((err) => {
-  console.error("DB init failed:", err.message);
+  logger.error("db_init_failed", { error: err.message });
   throw err;
 });
 
 module.exports = {
   query: async (...args) => {
     if (!pool) {
-      await initPromise; // 
+      await initPromise;
     }
     return pool.query(...args);
   },
