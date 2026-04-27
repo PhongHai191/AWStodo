@@ -8,6 +8,13 @@
             "log_group_name": "/todoapp/{{ app_environment }}/system",
             "log_stream_name": "{instance_id}/messages",
             "retention_in_days": 14
+          },
+          {
+            "file_path": "/var/lib/docker/containers/*/*.log",
+            "log_group_name": "/todoapp/{{ app_environment }}/docker",
+            "log_stream_name": "{instance_id}",
+            "timestamp_format": "%Y-%m-%dT%H:%M:%S.%fZ",
+            "retention_in_days": 14
           }
         ]
       }

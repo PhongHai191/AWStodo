@@ -20,6 +20,13 @@ resource "aws_cloudwatch_log_group" "system" {
   tags = { Name = "/todoapp/${var.environment}/system" }
 }
 
+resource "aws_cloudwatch_log_group" "docker" {
+  name              = "/todoapp/${var.environment}/docker"
+  retention_in_days = 14
+
+  tags = { Name = "/todoapp/${var.environment}/docker" }
+}
+
 # ── SNS Topic for alerts ────────────────────────────────────────────────────────
 resource "aws_sns_topic" "alerts" {
   name = "${var.project_name}-${var.environment}-alerts"

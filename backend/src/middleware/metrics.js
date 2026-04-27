@@ -10,18 +10,27 @@ const httpRequestsTotal = new client.Counter({
   registers: [register],
 });
 
+const httpRequestDuration = new client.Histogram({
+  name: "http_request_duration_seconds",
+  help: "HTTP request duration in seconds",
+  labelNames: ["method", "route", "status_code"],
+  buckets: [0.05, 0.1, 0.2, 0.5, 1, 2, 5],
+  registers: [register],
+});
+
 function metricsMiddleware(req, res, next) {
+  const endTimer = httpRequestDuration.startTimer();
+
   res.on("finish", () => {
-    // req.baseUrl = "/api/todos", req.route.path = "/:id"  →  "/api/todos/:id"
     const route = req.route
       ? (req.baseUrl + req.route.path).replace(/\/$/, "") || "/"
       : req.path;
-    httpRequestsTotal.inc({
-      method: req.method,
-      route,
-      status_code: res.statusCode,
-    });
+
+    const labels = { method: req.method, route, status_code: res.statusCode };
+    httpRequestsTotal.inc(labels);
+    endTimer(labels);
   });
+
   next();
 }
 

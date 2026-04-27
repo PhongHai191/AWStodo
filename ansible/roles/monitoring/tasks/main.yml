@@ -35,6 +35,15 @@
     mode: "0755"
   become: true
 
+- name: Create Grafana alerting provisioning directory
+  ansible.builtin.file:
+    path: "{{ app_dir }}/grafana/provisioning/alerting"
+    state: directory
+    owner: ec2-user
+    group: ec2-user
+    mode: "0755"
+  become: true
+
 - name: Copy Grafana datasource provisioning
   ansible.builtin.copy:
     src: grafana-datasource.yml
@@ -62,6 +71,15 @@
     mode: "0644"
   become: true
 
+- name: Copy Grafana alert rules
+  ansible.builtin.copy:
+    src: grafana-alerting.yml
+    dest: "{{ app_dir }}/grafana/provisioning/alerting/alerts.yml"
+    owner: ec2-user
+    group: ec2-user
+    mode: "0644"
+  become: true
+
 - name: Fetch SSM parameters
   ansible.builtin.set_fact:
     ssm_app_params: >-
@@ -70,6 +88,19 @@
                 bypath=True,
                 shortnames=True,
                 decrypt=True) }}
+
+- name: Get EC2 instance ID (IMDSv2)
+  ansible.builtin.shell: |
+    TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+      -H "X-aws-ec2-metadata-token-ttl-seconds: 60")
+    curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+      "http://169.254.169.254/latest/meta-data/instance-id"
+  register: instance_id_result
+  changed_when: false
+
+- name: Set instance_id fact
+  ansible.builtin.set_fact:
+    instance_id: "{{ instance_id_result.stdout }}"
 
 - name: Write .env file
   ansible.builtin.template:

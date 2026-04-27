@@ -21,7 +21,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: /todoapp/${ENVIRONMENT}/backend
-        awslogs-stream: "{{ .Name }}"
+        awslogs-stream: "{{ .Name }}-${INSTANCE_ID}"
         awslogs-create-group: "true"
 
   nginx:
@@ -37,7 +37,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: /todoapp/${ENVIRONMENT}/nginx
-        awslogs-stream: "{{ .Name }}"
+        awslogs-stream: "{{ .Name }}-${INSTANCE_ID}"
         awslogs-create-group: "true"
 
   node_exporter:
