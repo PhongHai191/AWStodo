@@ -120,27 +120,6 @@
     mode: "0644"
   become: true
 
-- name: Ensure monitoring log group exists
-  ansible.builtin.command:
-    cmd: >
-      aws logs create-log-group
-      --log-group-name /todoapp/{{ app_environment }}/monitoring
-      --region {{ aws_region }}
-  register: create_log_group
-  changed_when: create_log_group.rc == 0
-  failed_when:
-    - create_log_group.rc != 0
-    - "'ResourceAlreadyExistsException' not in create_log_group.stderr"
-
-- name: Set monitoring log group retention
-  ansible.builtin.command:
-    cmd: >
-      aws logs put-retention-policy
-      --log-group-name /todoapp/{{ app_environment }}/monitoring
-      --retention-in-days 14
-      --region {{ aws_region }}
-  changed_when: false
-
 - name: Pull monitoring images
   ansible.builtin.shell:
     cmd: docker compose pull

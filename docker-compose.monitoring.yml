@@ -12,13 +12,6 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.retention.time=15d
-    logging:
-      driver: awslogs
-      options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: /todoapp/${ENVIRONMENT}/monitoring
-        awslogs-stream: "prometheus-${INSTANCE_ID}"
-        awslogs-create-group: "true"
 
   grafana:
     image: grafana/grafana:11.6.1
@@ -33,39 +26,18 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
-    logging:
-      driver: awslogs
-      options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: /todoapp/${ENVIRONMENT}/monitoring
-        awslogs-stream: "grafana-${INSTANCE_ID}"
-        awslogs-create-group: "true"
 
   postgres_exporter:
     image: prometheuscommunity/postgres-exporter:v0.17.1
     restart: unless-stopped
     environment:
       DATA_SOURCE_NAME: "postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:5432/${DB_NAME}?sslmode=require"
-    logging:
-      driver: awslogs
-      options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: /todoapp/${ENVIRONMENT}/monitoring
-        awslogs-stream: "postgres-exporter-${INSTANCE_ID}"
-        awslogs-create-group: "true"
 
   redis_exporter:
     image: oliver006/redis_exporter:v1.74.0
     restart: unless-stopped
     environment:
       REDIS_ADDR: "redis://${REDIS_HOST}:6379"
-    logging:
-      driver: awslogs
-      options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: /todoapp/${ENVIRONMENT}/monitoring
-        awslogs-stream: "redis-exporter-${INSTANCE_ID}"
-        awslogs-create-group: "true"
 
 volumes:
   prometheus_data:
