@@ -44,6 +44,7 @@ services:
     image: prom/node-exporter:latest
     restart: unless-stopped
     pid: host
+    hostname: ${INSTANCE_ID:-web}
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
