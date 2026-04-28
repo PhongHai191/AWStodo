@@ -7,21 +7,7 @@
   "refresh": "30s",
   "schemaVersion": 38,
   "time": { "from": "now-1h", "to": "now" },
-  "templating": {
-    "list": [
-      {
-        "name": "datasource",
-        "type": "datasource",
-        "pluginId": "prometheus",
-        "label": "Datasource",
-        "hide": 2,
-        "current": {
-          "text": "Prometheus",
-          "value": "prometheus"
-        }
-      }
-    ]
-  },
+  "templating": { "list": [] },
   "panels": [
     {
       "id": 1,
@@ -29,7 +15,7 @@
       "title": "Request Rate",
       "description": "Current req/s across all instances",
       "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         { "expr": "sum(rate(http_requests_total{route!~\"/metrics|/health.*\"}[5m]))", "refId": "A" }
       ],
@@ -55,7 +41,7 @@
       "title": "Error Rate",
       "description": "% of 4xx/5xx responses",
       "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "sum(rate(http_requests_total{status_code=~\"[45]..\",route!~\"/metrics|/health.*\"}[5m])) / sum(rate(http_requests_total{route!~\"/metrics|/health.*\"}[5m])) * 100",
@@ -86,7 +72,7 @@
       "type": "stat",
       "title": "Total Requests (1h)",
       "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         { "expr": "sum(increase(http_requests_total{route!~\"/metrics|/health.*\"}[1h]))", "refId": "A" }
       ],
@@ -111,7 +97,7 @@
       "type": "stat",
       "title": "Active Instances",
       "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "count(count by (instance) (http_requests_total{route!~\"/metrics|/health.*\"}))",
@@ -142,7 +128,7 @@
       "title": "Request Rate by Endpoint",
       "description": "req/s per route, aggregated across all instances",
       "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "sum(rate(http_requests_total{route!~\"/metrics|/health.*\"}[5m])) by (method, route)",
@@ -170,7 +156,7 @@
       "type": "timeseries",
       "title": "Request Rate by Status Code",
       "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "sum(rate(http_requests_total{route!~\"/metrics|/health.*\"}[5m])) by (status_code)",
@@ -212,7 +198,7 @@
       "type": "timeseries",
       "title": "Request Rate by HTTP Method",
       "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "sum(rate(http_requests_total{route!~\"/metrics|/health.*\"}[5m])) by (method)",
@@ -236,7 +222,7 @@
       "type": "table",
       "title": "Requests per Endpoint (last 1h)",
       "gridPos": { "x": 0, "y": 20, "w": 24, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "sort_desc(sum by (method, route, status_code) (increase(http_requests_total{route!~\"/metrics|/health.*\"}[1h])))",
@@ -290,7 +276,7 @@
       "type": "timeseries",
       "title": "Node.js Heap Memory",
       "gridPos": { "x": 0, "y": 28, "w": 12, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "nodejs_heap_size_used_bytes{job=\"app_metrics\"}",
@@ -319,7 +305,7 @@
       "type": "timeseries",
       "title": "Node.js CPU Usage",
       "gridPos": { "x": 12, "y": 28, "w": 12, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "rate(process_cpu_seconds_total{job=\"app_metrics\"}[5m]) * 100",

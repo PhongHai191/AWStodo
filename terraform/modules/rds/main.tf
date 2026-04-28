@@ -46,14 +46,15 @@ resource "aws_db_instance" "main" {
   parameter_group_name   = aws_db_parameter_group.postgres.name
 
   multi_az                = false
-  backup_retention_period = 0
+  backup_retention_period = 7
   backup_window           = "03:00-04:00"
   maintenance_window      = "sun:04:00-sun:05:00"
 
-  publicly_accessible = false
-  port                = 5432
-  deletion_protection = false
-  skip_final_snapshot = true
+  publicly_accessible     = false
+  port                    = 5432
+  deletion_protection     = false
+  skip_final_snapshot     = false
+  final_snapshot_identifier = "${var.project_name}-${var.environment}-db-final"
 
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
   monitoring_interval             = 60
