@@ -14,8 +14,11 @@
         "type": "datasource",
         "pluginId": "prometheus",
         "label": "Datasource",
-        "hide": 0,
-        "current": {}
+        "hide": 2,
+        "current": {
+          "text": "Prometheus",
+          "value": "prometheus"
+        }
       }
     ]
   },
@@ -290,12 +293,12 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "nodejs_heap_size_used_bytes",
+          "expr": "nodejs_heap_size_used_bytes{job=\"app_metrics\"}",
           "legendFormat": "{{instance}} used",
           "refId": "A"
         },
         {
-          "expr": "nodejs_heap_size_total_bytes",
+          "expr": "nodejs_heap_size_total_bytes{job=\"app_metrics\"}",
           "legendFormat": "{{instance}} total",
           "refId": "B"
         }
@@ -319,7 +322,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total[5m]) * 100",
+          "expr": "rate(process_cpu_seconds_total{job=\"app_metrics\"}[5m]) * 100",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }

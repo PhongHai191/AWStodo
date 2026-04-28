@@ -217,6 +217,16 @@ resource "aws_security_group_rule" "monitoring_ingress_grafana" {
   cidr_blocks       = [var.trusted_ip]
 }
 
+resource "aws_security_group_rule" "monitoring_ingress_prometheus" {
+  type              = "ingress"
+  description       = "Prometheus from trusted IP"
+  security_group_id = aws_security_group.monitoring.id
+  from_port         = 9090
+  to_port           = 9090
+  protocol          = "tcp"
+  cidr_blocks       = [var.trusted_ip]
+}
+
 resource "aws_security_group_rule" "monitoring_egress_node_exporter" {
   type                     = "egress"
   description              = "Scrape node_exporter on web servers"
