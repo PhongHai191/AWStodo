@@ -1,6 +1,7 @@
 {
   "uid": "awstodo-app-metrics",
   "title": "App Metrics",
+  "folderTitle": "AWSTodo Alerts",
   "description": "HTTP request metrics — Node.js backend",
   "tags": ["app", "nodejs"],
   "timezone": "browser",
@@ -44,7 +45,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{status_code=~\"[45]..\",route!~\"/metrics|/health.*\"}[5m])) / sum(rate(http_requests_total{route!~\"/metrics|/health.*\"}[5m])) * 100",
+          "expr": "sum(rate(http_requests_total{status_code=~\"5..\",route!~\"/metrics|/health.*\"}[5m])) / sum(rate(http_requests_total{route!~\"/metrics|/health.*\"}[5m])) * 100",
           "refId": "A"
         }
       ],
