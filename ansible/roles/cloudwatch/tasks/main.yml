@@ -18,6 +18,15 @@
     state: present
   become: true
 
+- name: Ensure CloudWatch Agent config directory exists
+  ansible.builtin.file:
+    path: /opt/aws/amazon-cloudwatch-agent/etc
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+
 - name: Deploy CloudWatch Agent config
   ansible.builtin.template:
     src: amazon-cloudwatch-agent.json.j2
