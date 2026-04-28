@@ -120,6 +120,24 @@
     mode: "0644"
   become: true
 
+- name: Ensure monitoring log group exists
+  amazon.aws.cloudwatch_log_group:
+    log_group_name: "/todoapp/{{ app_environment }}/monitoring"
+    state: present
+    retention: 14
+    region: "{{ aws_region }}"
+
+- name: Pull monitoring images
+  ansible.builtin.shell:
+    cmd: docker compose pull
+    chdir: "{{ app_dir }}"
+  become: true
+  changed_when: false
+  register: pull_result
+  retries: 3
+  delay: 30
+  until: pull_result.rc == 0
+
 - name: Deploy monitoring stack
   ansible.builtin.shell:
     cmd: docker compose up -d --remove-orphans

@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.3.1
     restart: unless-stopped
     ports:
       - "9090:9090"
@@ -21,7 +21,7 @@ services:
         awslogs-create-group: "true"
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.6.1
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -42,7 +42,7 @@ services:
         awslogs-create-group: "true"
 
   postgres_exporter:
-    image: prometheuscommunity/postgres-exporter:latest
+    image: prometheuscommunity/postgres-exporter:v0.17.1
     restart: unless-stopped
     environment:
       DATA_SOURCE_NAME: "postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:5432/${DB_NAME}?sslmode=require"
@@ -55,7 +55,7 @@ services:
         awslogs-create-group: "true"
 
   redis_exporter:
-    image: oliver006/redis_exporter:latest
+    image: oliver006/redis_exporter:v1.74.0
     restart: unless-stopped
     environment:
       REDIS_ADDR: "redis://${REDIS_HOST}:6379"
