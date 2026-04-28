@@ -6,3 +6,5 @@ node_modules
 .ps1
 *.tfvars
 *.tfvars.json
+.md
+
